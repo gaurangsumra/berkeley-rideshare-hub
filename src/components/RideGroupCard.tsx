@@ -49,7 +49,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
     try {
       const memberIds = rideGroup.ride_members.map(m => m.user_id);
       const { data, error } = await supabase
-        .from('profiles')
+        .from('public_profiles')
         .select('*')
         .in('id', memberIds);
 
