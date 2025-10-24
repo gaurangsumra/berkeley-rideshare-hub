@@ -24,6 +24,7 @@ export type Database = {
           destination: string
           id: string
           name: string
+          search_vector: unknown
         }
         Insert: {
           city: string
@@ -34,6 +35,7 @@ export type Database = {
           destination: string
           id?: string
           name: string
+          search_vector?: unknown
         }
         Update: {
           city?: string
@@ -44,6 +46,7 @@ export type Database = {
           destination?: string
           id?: string
           name?: string
+          search_vector?: unknown
         }
         Relationships: [
           {
@@ -374,7 +377,19 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      search_events: {
+        Args: { search_query: string }
+        Returns: {
+          city: string
+          created_at: string
+          created_by: string
+          date_time: string
+          description: string
+          destination: string
+          id: string
+          name: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
