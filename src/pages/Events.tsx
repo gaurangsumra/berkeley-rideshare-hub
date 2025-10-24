@@ -9,7 +9,6 @@ import { Navigation } from "@/components/Navigation";
 import { EventCard } from "@/components/EventCard";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { ImportCalendarDialog } from "@/components/ImportCalendarDialog";
-import { ImportEventbriteDialog } from "@/components/ImportEventbriteDialog";
 import { debounce } from "@/lib/utils";
 
 interface Event {
@@ -28,7 +27,6 @@ const Events = () => {
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [importEventbriteDialogOpen, setImportEventbriteDialogOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -90,6 +88,58 @@ const Events = () => {
     []
   );
 
+  const handleImportEventbrite = async () => {
+    const loadingToast = toast.loading("Importing Bay Area events from Eventbrite...");
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('eventbrite-search', {
+        body: {}
+      });
+      
+      if (error) throw error;
+      
+      const events = data.events || [];
+      
+      if (events.length === 0) {
+        toast.dismiss(loadingToast);
+        toast.info("No new events found in the Bay Area for the next 30 days");
+        return;
+      }
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.dismiss(loadingToast);
+        toast.error("You must be logged in to import events");
+        return;
+      }
+      
+      const { error: insertError } = await supabase
+        .from('events')
+        .insert(
+          events.map((event: any) => ({
+            name: event.name,
+            date_time: event.date_time,
+            destination: event.destination,
+            city: event.city,
+            description: event.description,
+            created_by: session.user.id
+          }))
+        );
+      
+      if (insertError) throw insertError;
+      
+      toast.dismiss(loadingToast);
+      toast.success(`Successfully imported ${events.length} events from the Bay Area! 🎉`);
+      
+      fetchEvents();
+      
+    } catch (error: any) {
+      toast.dismiss(loadingToast);
+      console.error('Import error:', error);
+      toast.error(error.message || "Failed to import events from Eventbrite");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="container mx-auto px-4 py-6 max-w-4xl">
@@ -104,7 +154,7 @@ const Events = () => {
                 <Calendar className="w-4 h-4 mr-2" />
                 Import Calendar
               </Button>
-              <Button onClick={() => setImportEventbriteDialogOpen(true)} size="lg" variant="outline">
+              <Button onClick={handleImportEventbrite} size="lg" variant="outline">
                 <Calendar className="w-4 h-4 mr-2" />
                 Import Eventbrite
               </Button>
@@ -171,12 +221,6 @@ const Events = () => {
       <ImportCalendarDialog
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
-        onEventsImported={fetchEvents}
-      />
-
-      <ImportEventbriteDialog
-        open={importEventbriteDialogOpen}
-        onOpenChange={setImportEventbriteDialogOpen}
         onEventsImported={fetchEvents}
       />
 

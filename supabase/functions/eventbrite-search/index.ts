@@ -5,21 +5,26 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Bay Area locations to search
+const BAY_AREA_LOCATIONS = [
+  'Berkeley, CA',
+  'San Francisco, CA',
+  'Palo Alto, CA',
+  'San Jose, CA',
+  'Oakland, CA',
+  'Mountain View, CA',
+  'Sunnyvale, CA',
+  'Santa Clara, CA',
+  'Fremont, CA',
+  'Redwood City, CA'
+];
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { query, location } = await req.json();
-
-    if (!location || location.trim() === '') {
-      return new Response(
-        JSON.stringify({ error: 'Location is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const token = Deno.env.get('EVENTBRITE_PRIVATE_TOKEN');
     
     if (!token) {
@@ -35,67 +40,78 @@ serve(async (req) => {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + 30);
 
-    console.log('Searching Eventbrite:', { query, location, startDate: startDate.toISOString(), endDate: endDate.toISOString() });
-
-    // Build Eventbrite API URL with parameters
-    const params = new URLSearchParams({
-      'location.address': location,
-      'location.within': '25mi',
-      'start_date.range_start': startDate.toISOString(),
-      'start_date.range_end': endDate.toISOString(),
-      'expand': 'venue',
-      'page': '1',
+    console.log('Auto-importing Bay Area events:', { 
+      locations: BAY_AREA_LOCATIONS.length,
+      startDate: startDate.toISOString(), 
+      endDate: endDate.toISOString() 
     });
 
-    if (query && query.trim()) {
-      params.append('q', query.trim());
-    }
+    // Fetch events from all Bay Area locations in parallel
+    const fetchEventsForLocation = async (location: string) => {
+      const params = new URLSearchParams({
+        'location.address': location,
+        'location.within': '25mi',
+        'start_date.range_start': startDate.toISOString(),
+        'start_date.range_end': endDate.toISOString(),
+        'expand': 'venue',
+        'page': '1',
+      });
 
-    const url = `https://www.eventbriteapi.com/v3/events/search/?${params.toString()}`;
+      const url = `https://www.eventbriteapi.com/v3/events/search/?${params.toString()}`;
 
-    console.log('Calling Eventbrite API:', url);
+      console.log(`Fetching events for ${location}`);
 
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Eventbrite API error:', response.status, errorText);
-      
-      if (response.status === 401) {
-        return new Response(
-          JSON.stringify({ error: 'Invalid Eventbrite API token' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (!response.ok) {
+        console.error(`Error fetching ${location}:`, response.status);
+        return [];
       }
 
-      return new Response(
-        JSON.stringify({ error: 'Eventbrite API error', details: errorText }),
-        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+      const data = await response.json();
+      console.log(`${location}: ${data.events?.length || 0} events found`);
+      return data.events || [];
+    };
 
-    const data = await response.json();
-    console.log('Eventbrite API response:', { 
-      pagination: data.pagination,
-      event_count: data.events?.length || 0
+    // Fetch all locations in parallel
+    const locationPromises = BAY_AREA_LOCATIONS.map(location => 
+      fetchEventsForLocation(location)
+    );
+
+    const results = await Promise.allSettled(locationPromises);
+    
+    // Extract successful results
+    const allEvents = results
+      .filter((r): r is PromiseFulfilledResult<any[]> => r.status === 'fulfilled')
+      .flatMap(r => r.value);
+
+    console.log(`Total events fetched: ${allEvents.length}`);
+
+    // Deduplicate by event ID
+    const uniqueEventsMap = new Map();
+    allEvents.forEach(event => {
+      if (!uniqueEventsMap.has(event.id)) {
+        uniqueEventsMap.set(event.id, event);
+      }
     });
+    const uniqueEvents = Array.from(uniqueEventsMap.values());
+
+    console.log(`After deduplication: ${uniqueEvents.length} unique events`);
 
     // Filter out online events
-    const filteredEvents = (data.events || []).filter((event: any) => {
+    const filteredEvents = uniqueEvents.filter((event: any) => {
       // Must have a venue
       if (!event.venue) {
-        console.log('Filtering out event (no venue):', event.name?.text);
         return false;
       }
 
       // Must have a physical address
       if (!event.venue.address) {
-        console.log('Filtering out event (no address):', event.name?.text);
         return false;
       }
 
@@ -104,23 +120,32 @@ serve(async (req) => {
 
       // Exclude if city is "Online" or empty
       if (city === 'online' || city === '') {
-        console.log('Filtering out event (online/empty city):', event.name?.text, city);
         return false;
       }
 
       // Exclude if venue name contains "online"
       if (venueName.includes('online')) {
-        console.log('Filtering out event (online venue):', event.name?.text, venueName);
         return false;
       }
 
       return true;
     });
 
-    console.log(`Filtered ${data.events?.length || 0} events down to ${filteredEvents.length} in-person events`);
+    console.log(`After filtering: ${filteredEvents.length} in-person events`);
+
+    // Sort by date and limit to 100
+    const sortedEvents = filteredEvents.sort((a: any, b: any) => {
+      const dateA = new Date(a.start?.local || a.start?.utc);
+      const dateB = new Date(b.start?.local || b.start?.utc);
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    const finalEvents = sortedEvents.slice(0, 100);
+
+    console.log(`Final result: ${finalEvents.length} events (limit 100)`);
 
     // Transform events to our format
-    const transformedEvents = filteredEvents.map((event: any) => ({
+    const transformedEvents = finalEvents.map((event: any) => ({
       eventbrite_id: event.id,
       name: event.name?.text || 'Untitled Event',
       date_time: event.start?.local || event.start?.utc,
