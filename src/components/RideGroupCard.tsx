@@ -39,12 +39,30 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
   const [showVoting, setShowVoting] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [leaderMeetingPoint, setLeaderMeetingPoint] = useState<string | null>(null);
 
   const isMember = currentUserId && rideGroup.ride_members.some(m => m.user_id === currentUserId);
   const isFull = rideGroup.ride_members.length >= rideGroup.capacity;
 
   useEffect(() => {
     fetchMembers();
+  }, [rideGroup.id]);
+
+  // Keep leader in sync with votes (realtime)
+  useEffect(() => {
+    fetchLeader();
+    const channel = supabase
+      .channel(`meeting_votes_${rideGroup.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'meeting_votes', filter: `ride_id=eq.${rideGroup.id}` },
+        () => fetchLeader()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [rideGroup.id]);
 
   // Auto-prompt for Uber payment 1 hour before departure
@@ -88,6 +106,42 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
       console.error("Failed to load members:", error);
     }
   };
+
+  const fetchLeader = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('meeting_votes')
+        .select('vote_option')
+        .eq('ride_id', rideGroup.id);
+      if (error) throw error;
+
+      const counts: Record<string, number> = {};
+      data?.forEach(v => {
+        counts[v.vote_option] = (counts[v.vote_option] || 0) + 1;
+      });
+      const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+      setLeaderMeetingPoint(top ? top[0] : null);
+    } catch (e) {
+      console.error('Failed to fetch leader meeting point', e);
+    }
+  };
+
+  // Keep leader in sync with votes (realtime)
+  useEffect(() => {
+    fetchLeader();
+    const channel = supabase
+      .channel(`meeting_votes_${rideGroup.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'meeting_votes', filter: `ride_id=eq.${rideGroup.id}` },
+        () => fetchLeader()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [rideGroup.id]);
 
   const handleJoinRide = async () => {
     if (!currentUserId) return;
@@ -152,10 +206,10 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
       </CardHeader>
       
       <CardContent className="space-y-4">
-        {rideGroup.meeting_point && (
+        {(leaderMeetingPoint || rideGroup.meeting_point) && (
           <div className="flex items-center gap-2 text-sm text-primary font-medium p-3 bg-primary/5 rounded-lg">
             <MapPin className="w-4 h-4" />
-            <span>Meeting Point: {rideGroup.meeting_point}</span>
+            <span>Meeting Point: {leaderMeetingPoint ?? rideGroup.meeting_point}</span>
           </div>
         )}
 
@@ -224,7 +278,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
       {isMember && showVoting && (
         <MeetingPointVoting
           rideId={rideGroup.id}
-          currentMeetingPoint={rideGroup.meeting_point}
+          currentMeetingPoint={leaderMeetingPoint ?? rideGroup.meeting_point}
           onClose={() => setShowVoting(false)}
           onUpdate={onUpdate}
         />
