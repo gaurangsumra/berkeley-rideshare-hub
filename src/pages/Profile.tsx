@@ -7,13 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Navigation } from "@/components/Navigation";
 import { toast } from "sonner";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Upload, X } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Profile = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [program, setProgram] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -36,6 +39,7 @@ const Profile = () => {
       if (error) throw error;
       setProfile(data);
       setProgram(data.program || "");
+      setPhotoUrl(data.photo || null);
     } catch (error: any) {
       toast.error("Failed to load profile");
     }
@@ -57,6 +61,105 @@ const Profile = () => {
       toast.error("Failed to update program");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !profile) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be less than 2MB");
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      // Delete old photo if exists
+      if (profile.photo) {
+        const oldPath = profile.photo.split('/').pop();
+        if (oldPath) {
+          await supabase.storage
+            .from('profile-photos')
+            .remove([`${profile.id}/${oldPath}`]);
+        }
+      }
+
+      // Upload new photo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${profile.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-photos')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-photos')
+        .getPublicUrl(filePath);
+
+      // Update profile with new photo URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ photo: publicUrl })
+        .eq('id', profile.id);
+
+      if (updateError) throw updateError;
+
+      setPhotoUrl(publicUrl);
+      setProfile({ ...profile, photo: publicUrl });
+      toast.success("Profile photo updated successfully");
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast.error("Failed to upload photo");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handlePhotoDelete = async () => {
+    if (!profile?.photo) return;
+
+    try {
+      setUploading(true);
+
+      // Delete from storage
+      const oldPath = profile.photo.split('/').pop();
+      if (oldPath) {
+        const { error: deleteError } = await supabase.storage
+          .from('profile-photos')
+          .remove([`${profile.id}/${oldPath}`]);
+
+        if (deleteError) throw deleteError;
+      }
+
+      // Update profile to remove photo URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ photo: null })
+        .eq('id', profile.id);
+
+      if (updateError) throw updateError;
+
+      setPhotoUrl(null);
+      setProfile({ ...profile, photo: null });
+      toast.success("Profile photo removed");
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      toast.error("Failed to delete photo");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -89,6 +192,50 @@ const Profile = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex flex-col items-center gap-4 pb-4 border-b">
+              <Avatar className="w-24 h-24">
+                <AvatarImage src={photoUrl || undefined} alt={profile.name} />
+                <AvatarFallback className="text-2xl">
+                  {profile.name?.charAt(0)?.toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex gap-2">
+                <label htmlFor="photo-upload">
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    size="sm"
+                    disabled={uploading}
+                    asChild
+                  >
+                    <span>
+                      <Upload className="w-4 h-4 mr-2" />
+                      {uploading ? "Uploading..." : "Upload Photo"}
+                    </span>
+                  </Button>
+                  <input
+                    id="photo-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoUpload}
+                    disabled={uploading}
+                  />
+                </label>
+                {photoUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handlePhotoDelete}
+                    disabled={uploading}
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Remove
+                  </Button>
+                )}
+              </div>
+            </div>
             <div>
               <Label>Name</Label>
               <Input value={profile.name} disabled className="mt-1" />
