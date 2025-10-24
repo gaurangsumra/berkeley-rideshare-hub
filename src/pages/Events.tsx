@@ -9,6 +9,7 @@ import { Navigation } from "@/components/Navigation";
 import { EventCard } from "@/components/EventCard";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { ImportCalendarDialog } from "@/components/ImportCalendarDialog";
+import { ImportEventbriteDialog } from "@/components/ImportEventbriteDialog";
 import { debounce } from "@/lib/utils";
 
 interface Event {
@@ -27,6 +28,7 @@ const Events = () => {
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importEventbriteDialogOpen, setImportEventbriteDialogOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -102,6 +104,10 @@ const Events = () => {
                 <Calendar className="w-4 h-4 mr-2" />
                 Import Calendar
               </Button>
+              <Button onClick={() => setImportEventbriteDialogOpen(true)} size="lg" variant="outline">
+                <Calendar className="w-4 h-4 mr-2" />
+                Import Eventbrite
+              </Button>
               <Button onClick={() => setCreateDialogOpen(true)} size="lg">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Event
@@ -165,6 +171,12 @@ const Events = () => {
       <ImportCalendarDialog
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
+        onEventsImported={fetchEvents}
+      />
+
+      <ImportEventbriteDialog
+        open={importEventbriteDialogOpen}
+        onOpenChange={setImportEventbriteDialogOpen}
         onEventsImported={fetchEvents}
       />
 
