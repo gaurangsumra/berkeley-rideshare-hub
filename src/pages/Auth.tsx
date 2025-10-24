@@ -66,7 +66,9 @@ const Auth = () => {
 
       if (error) throw error;
       
-      toast.success("Account created! You can now sign in.");
+      toast.success("Verification email sent! Please check your inbox and verify your email before signing in.", {
+        duration: 6000
+      });
       setEmail("");
       setPassword("");
       setName("");
@@ -93,12 +95,19 @@ const Auth = () => {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("Email not confirmed")) {
+          toast.error("Please verify your email before signing in. Check your inbox for the verification link.");
+        } else {
+          toast.error(error.message || "Failed to sign in");
+        }
+        throw error;
+      }
       
       toast.success("Signed in successfully!");
       navigate("/events");
     } catch (error: any) {
-      toast.error(error.message || "Failed to sign in");
+      // Error already handled above
     } finally {
       setLoading(false);
     }
@@ -136,8 +145,8 @@ const Auth = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Sign In</CardTitle>
-            <CardDescription>Use your @berkeley.edu email to access the platform</CardDescription>
+            <CardTitle>Welcome to Berkeley Rides</CardTitle>
+            <CardDescription>Use your @berkeley.edu email to access the platform. New users will receive a verification email.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <Tabs defaultValue="signin" className="w-full">
