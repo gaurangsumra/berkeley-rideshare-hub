@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { Navigation } from "@/components/Navigation";
 import { EventCard } from "@/components/EventCard";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
+import { ImportCalendarDialog } from "@/components/ImportCalendarDialog";
 
 interface Event {
   id: string;
@@ -23,6 +24,7 @@ const Events = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -70,10 +72,16 @@ const Events = () => {
             <h1 className="text-3xl font-bold text-primary">Upcoming Events</h1>
             <p className="text-muted-foreground mt-1">Find rides to off-campus events</p>
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)} size="lg">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Event
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setImportDialogOpen(true)} size="lg" variant="outline">
+              <Calendar className="w-4 h-4 mr-2" />
+              Import Calendar
+            </Button>
+            <Button onClick={() => setCreateDialogOpen(true)} size="lg">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Event
+            </Button>
+          </div>
         </div>
 
         {loading ? (
@@ -103,6 +111,12 @@ const Events = () => {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onEventCreated={fetchEvents}
+      />
+
+      <ImportCalendarDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        onEventsImported={fetchEvents}
       />
 
       <Navigation />
