@@ -113,6 +113,8 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          invited_via_ride_id: string | null
+          is_invited_user: boolean | null
           name: string
           photo: string | null
           program: string
@@ -121,6 +123,8 @@ export type Database = {
           created_at?: string | null
           email: string
           id: string
+          invited_via_ride_id?: string | null
+          is_invited_user?: boolean | null
           name: string
           photo?: string | null
           program: string
@@ -129,11 +133,21 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          invited_via_ride_id?: string | null
+          is_invited_user?: boolean | null
           name?: string
           photo?: string | null
           program?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_invited_via_ride_id_fkey"
+            columns: ["invited_via_ride_id"]
+            isOneToOne: false
+            referencedRelation: "ride_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ride_groups: {
         Row: {
@@ -186,6 +200,47 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ride_invites: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          invite_token: string
+          max_uses: number | null
+          ride_id: string
+          use_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          id?: string
+          invite_token: string
+          max_uses?: number | null
+          ride_id: string
+          use_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          invite_token?: string
+          max_uses?: number | null
+          ride_id?: string
+          use_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ride_invites_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "ride_groups"
             referencedColumns: ["id"]
           },
         ]

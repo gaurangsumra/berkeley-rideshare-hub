@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Clock, Users, MapPin } from "lucide-react";
+import { Clock, Users, MapPin, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { MeetingPointVoting } from "@/components/MeetingPointVoting";
 import { UberPaymentDialog } from "@/components/UberPaymentDialog";
+import { InviteDialog } from "@/components/InviteDialog";
 
 interface RideGroup {
   id: string;
@@ -37,6 +38,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
   const [loading, setLoading] = useState(false);
   const [showVoting, setShowVoting] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
 
   const isMember = currentUserId && rideGroup.ride_members.some(m => m.user_id === currentUserId);
   const isFull = rideGroup.ride_members.length >= rideGroup.capacity;
@@ -44,6 +46,33 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
   useEffect(() => {
     fetchMembers();
   }, [rideGroup.id]);
+
+  // Auto-prompt for Uber payment 1 hour before departure
+  useEffect(() => {
+    if (!isMember || rideGroup.travel_mode !== 'Uber') return;
+    
+    const checkTime = () => {
+      const departureTime = new Date(rideGroup.departure_time);
+      const currentTime = new Date();
+      const oneHourBefore = new Date(departureTime.getTime() - 60 * 60 * 1000);
+      const fiveMinutesAfter = new Date(oneHourBefore.getTime() + 5 * 60 * 1000);
+      
+      // Check if current time is within 1 hour before window (with 5-min buffer)
+      if (currentTime >= oneHourBefore && currentTime <= fiveMinutesAfter) {
+        const alreadyPrompted = localStorage.getItem(`uber-prompt-${rideGroup.id}`);
+        if (!alreadyPrompted) {
+          setShowPayment(true);
+          localStorage.setItem(`uber-prompt-${rideGroup.id}`, 'true');
+          toast.info("It's almost time for your ride! Let's coordinate payment.");
+        }
+      }
+    };
+    
+    checkTime(); // Check immediately
+    const interval = setInterval(checkTime, 60000); // Check every minute
+    
+    return () => clearInterval(interval);
+  }, [rideGroup.id, rideGroup.departure_time, rideGroup.travel_mode, isMember]);
 
   const fetchMembers = async () => {
     try {
@@ -168,10 +197,16 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
               </Button>
               <Button
                 onClick={() => setShowVoting(true)}
-                variant="secondary"
+                variant="outline"
                 className="flex-1"
               >
                 Vote Meeting Point
+              </Button>
+              <Button
+                onClick={() => setShowInvite(true)}
+                variant="outline"
+              >
+                <UserPlus className="w-4 h-4" />
               </Button>
               {rideGroup.travel_mode === 'Uber' && (
                 <Button
@@ -202,6 +237,14 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
           rideId={rideGroup.id}
           members={members}
           currentUserId={currentUserId}
+        />
+      )}
+
+      {isMember && showInvite && (
+        <InviteDialog
+          open={showInvite}
+          onOpenChange={setShowInvite}
+          rideId={rideGroup.id}
         />
       )}
     </Card>

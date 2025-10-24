@@ -106,10 +106,46 @@ export const MeetingPointVoting = ({
       }
 
       await fetchVotes();
+      
+      // Auto-update meeting point to highest voted option
+      await autoUpdateMeetingPoint();
     } catch (error: any) {
       toast.error("Failed to update vote");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const autoUpdateMeetingPoint = async () => {
+    try {
+      // Fetch latest votes
+      const { data, error } = await supabase
+        .from('meeting_votes')
+        .select('vote_option')
+        .eq('ride_id', rideId);
+
+      if (error) throw error;
+
+      // Calculate winner
+      const voteCounts: Record<string, number> = {};
+      data?.forEach(vote => {
+        voteCounts[vote.vote_option] = (voteCounts[vote.vote_option] || 0) + 1;
+      });
+
+      const winner = Object.entries(voteCounts).sort((a, b) => b[1] - a[1])[0];
+      
+      if (winner && winner[0] !== currentMeetingPoint) {
+        // Update meeting point
+        const { error: updateError } = await supabase
+          .from('ride_groups')
+          .update({ meeting_point: winner[0] })
+          .eq('id', rideId);
+
+        if (updateError) throw updateError;
+        onUpdate();
+      }
+    } catch (error: any) {
+      console.error("Failed to auto-update meeting point:", error);
     }
   };
 
