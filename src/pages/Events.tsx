@@ -3,13 +3,19 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Calendar, Search } from "lucide-react";
+import { Plus, Calendar, Search, ChevronDown, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Navigation } from "@/components/Navigation";
 import { EventCard } from "@/components/EventCard";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { ImportCalendarDialog } from "@/components/ImportCalendarDialog";
 import { debounce } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Event {
   id: string;
@@ -150,17 +156,28 @@ const Events = () => {
               <p className="text-muted-foreground mt-1">Find rides to off-campus events</p>
             </div>
             <div className="flex gap-2">
-              <Button onClick={() => setImportDialogOpen(true)} size="lg" variant="outline">
-                <Calendar className="w-4 h-4 mr-2" />
-                Import Calendar
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="lg">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Event
+                    <ChevronDown className="w-4 h-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Import Calendar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setCreateDialogOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Event Manually
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button onClick={handleImportEventbrite} size="lg" variant="outline">
-                <Calendar className="w-4 h-4 mr-2" />
+                <Upload className="w-4 h-4 mr-2" />
                 Import Eventbrite
-              </Button>
-              <Button onClick={() => setCreateDialogOpen(true)} size="lg">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Event
               </Button>
             </div>
           </div>
