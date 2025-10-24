@@ -119,8 +119,19 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
       data?.forEach(v => {
         counts[v.vote_option] = (counts[v.vote_option] || 0) + 1;
       });
-      const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-      setLeaderMeetingPoint(top ? top[0] : null);
+      
+      const entries = Object.entries(counts);
+      if (entries.length === 0) {
+        setLeaderMeetingPoint(null);
+        return;
+      }
+      
+      const maxVotes = Math.max(...entries.map(([_, count]) => count));
+      const winners = entries
+        .filter(([_, count]) => count === maxVotes)
+        .map(([option]) => option);
+      
+      setLeaderMeetingPoint(winners.join(' OR '));
     } catch (e) {
       console.error('Failed to fetch leader meeting point', e);
     }
