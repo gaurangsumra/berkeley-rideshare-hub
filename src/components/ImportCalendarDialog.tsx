@@ -61,30 +61,30 @@ export function ImportCalendarDialog({ open, onOpenChange, onEventsImported }: I
   const [checkingConnection, setCheckingConnection] = useState(true);
 
   // Check Google Calendar connection status when dialog opens
-  useEffect(() => {
-    const checkConnection = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          setCheckingConnection(false);
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('calendar_tokens')
-          .select('id')
-          .eq('user_id', session.user.id)
-          .eq('provider', 'google')
-          .maybeSingle();
-
-        setIsGoogleConnected(!!data && !error);
-      } catch (error) {
-        console.error('Error checking connection:', error);
-      } finally {
+  const checkConnection = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         setCheckingConnection(false);
+        return;
       }
-    };
 
+      const { data, error } = await supabase
+        .from('calendar_tokens')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .eq('provider', 'google')
+        .maybeSingle();
+
+      setIsGoogleConnected(!!data && !error);
+    } catch (error) {
+      console.error('Error checking connection:', error);
+    } finally {
+      setCheckingConnection(false);
+    }
+  };
+
+  useEffect(() => {
     if (open) {
       checkConnection();
     }
@@ -100,9 +100,7 @@ export function ImportCalendarDialog({ open, onOpenChange, onEventsImported }: I
       }
 
       // Get auth URL from edge function
-      const { data, error } = await supabase.functions.invoke('google-calendar-auth', {
-        body: { userId: session.user.id }
-      });
+      const { data, error } = await supabase.functions.invoke('google-calendar-auth');
 
       if (error) throw error;
 
@@ -117,9 +115,10 @@ export function ImportCalendarDialog({ open, onOpenChange, onEventsImported }: I
       const handleMessage = (event: MessageEvent) => {
         if (event.data.type === 'CALENDAR_AUTH_SUCCESS') {
           toast.success('Google Calendar connected successfully!');
-          setIsGoogleConnected(true);
           popup?.close();
           window.removeEventListener('message', handleMessage);
+          // Re-check connection status after successful auth
+          setTimeout(() => checkConnection(), 1000);
         } else if (event.data.type === 'CALENDAR_AUTH_ERROR') {
           toast.error('Failed to connect Google Calendar');
           popup?.close();

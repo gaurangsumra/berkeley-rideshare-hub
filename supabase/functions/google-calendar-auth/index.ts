@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,17 +14,30 @@ serve(async (req) => {
   try {
     const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
     const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar-callback`;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
     if (!clientId) {
       throw new Error('Google OAuth not configured');
     }
 
-    // Get user ID from request (passed from client)
-    const { userId } = await req.json();
-
-    if (!userId) {
-      throw new Error('User ID required');
+    // Get authenticated user from JWT
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      throw new Error('Missing authorization header');
     }
+
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: { headers: { authorization: authHeader } },
+    });
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      throw new Error('Unauthorized');
+    }
+
+    const userId = user.id;
 
     // Build OAuth URL
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
@@ -35,7 +49,7 @@ serve(async (req) => {
     authUrl.searchParams.set('prompt', 'consent'); // Force consent to get refresh token
     authUrl.searchParams.set('state', userId); // Pass user ID in state
 
-    console.log('Generated auth URL for user:', userId);
+    console.log('Generated auth URL for authenticated user');
 
     return new Response(
       JSON.stringify({ authUrl: authUrl.toString() }),
