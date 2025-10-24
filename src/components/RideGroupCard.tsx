@@ -101,7 +101,20 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
         .in('id', memberIds);
 
       if (error) throw error;
-      setMembers(data || []);
+      
+      // Create placeholder profiles for members not in public_profiles
+      const fetchedIds = data?.map(p => p.id) || [];
+      const missingIds = memberIds.filter(id => !fetchedIds.includes(id));
+      
+      const placeholderProfiles = missingIds.map(id => ({
+        id,
+        name: 'User',
+        photo: null,
+        program: 'Unknown',
+        created_at: new Date().toISOString()
+      }));
+      
+      setMembers([...(data || []), ...placeholderProfiles]);
     } catch (error: any) {
       console.error("Failed to load members:", error);
     }

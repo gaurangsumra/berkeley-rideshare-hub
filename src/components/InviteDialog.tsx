@@ -70,7 +70,7 @@ export const InviteDialog = ({ open, onOpenChange, rideId }: InviteDialogProps) 
           <DialogTitle>Invite Someone to This Ride</DialogTitle>
           <DialogDescription>
             Generate a shareable invite link that allows non-Berkeley users to join this ride group.
-            The link expires in 7 days.
+            The link expires in 3 days or after one use.
           </DialogDescription>
         </DialogHeader>
 
