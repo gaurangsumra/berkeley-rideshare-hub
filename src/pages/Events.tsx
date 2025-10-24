@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Navigation } from "@/components/Navigation";
 import { EventCard } from "@/components/EventCard";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { ImportCalendarDialog } from "@/components/ImportCalendarDialog";
+import { debounce } from "@/lib/utils";
 
 interface Event {
   id: string;
@@ -49,16 +50,28 @@ const Events = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const fetchEvents = async () => {
+  const fetchEvents = async (searchTerm = "") => {
     try {
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .gte('date_time', new Date().toISOString())
-        .order('date_time', { ascending: true });
+      if (searchTerm.trim()) {
+        // Use PostgreSQL full-text search
+        const { data, error } = await supabase
+          .rpc('search_events', { 
+            search_query: searchTerm 
+          });
+        
+        if (error) throw error;
+        setEvents(data || []);
+      } else {
+        // No search term - fetch all upcoming events
+        const { data, error } = await supabase
+          .from('events')
+          .select('*')
+          .gte('date_time', new Date().toISOString())
+          .order('date_time', { ascending: true });
 
-      if (error) throw error;
-      setEvents(data || []);
+        if (error) throw error;
+        setEvents(data || []);
+      }
     } catch (error: any) {
       toast.error("Failed to load events");
     } finally {
@@ -66,14 +79,14 @@ const Events = () => {
     }
   };
 
-  const filteredEvents = events.filter((event) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      event.name.toLowerCase().includes(query) ||
-      event.destination.toLowerCase().includes(query) ||
-      event.city.toLowerCase().includes(query)
-    );
-  });
+  // Debounce search to avoid too many queries
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      setLoading(true);
+      fetchEvents(query);
+    }, 300),
+    []
+  );
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -101,7 +114,10 @@ const Events = () => {
             <Input
               placeholder="Search events by name, destination, or city..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                debouncedSearch(e.target.value);
+              }}
               className="pl-10"
             />
           </div>
@@ -113,7 +129,7 @@ const Events = () => {
               <div key={i} className="h-32 bg-muted rounded-lg animate-pulse" />
             ))}
           </div>
-        ) : events.length === 0 ? (
+        ) : events.length === 0 && !searchQuery ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground mb-4">No upcoming events yet</p>
             <Button onClick={() => setCreateDialogOpen(true)}>
@@ -121,16 +137,19 @@ const Events = () => {
               Create the first event
             </Button>
           </div>
-        ) : filteredEvents.length === 0 ? (
+        ) : events.length === 0 && searchQuery ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground mb-4">No events match your search</p>
-            <Button onClick={() => setSearchQuery("")} variant="outline">
+            <Button onClick={() => {
+              setSearchQuery("");
+              fetchEvents();
+            }} variant="outline">
               Clear search
             </Button>
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredEvents.map((event) => (
+            {events.map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
           </div>
