@@ -120,6 +120,8 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
         counts[v.vote_option] = (counts[v.vote_option] || 0) + 1;
       });
       
+      console.log('Vote counts:', counts);
+      
       const entries = Object.entries(counts);
       if (entries.length === 0) {
         setLeaderMeetingPoint(null);
@@ -129,9 +131,12 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
       const maxVotes = Math.max(...entries.map(([_, count]) => count));
       const winners = entries
         .filter(([_, count]) => count === maxVotes)
-        .map(([option]) => option);
+        .map(([option]) => option)
+        .sort(); // Sort alphabetically for consistency
       
-      setLeaderMeetingPoint(winners.join(' OR '));
+      const result = winners.join(' OR ');
+      console.log('Winners with max votes:', winners, 'Result:', result);
+      setLeaderMeetingPoint(result);
     } catch (e) {
       console.error('Failed to fetch leader meeting point', e);
     }
