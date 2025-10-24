@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Calendar, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Navigation } from "@/components/Navigation";
 import { EventCard } from "@/components/EventCard";
@@ -26,6 +27,7 @@ const Events = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -64,23 +66,44 @@ const Events = () => {
     }
   };
 
+  const filteredEvents = events.filter((event) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      event.name.toLowerCase().includes(query) ||
+      event.destination.toLowerCase().includes(query) ||
+      event.city.toLowerCase().includes(query)
+    );
+  });
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="container mx-auto px-4 py-6 max-w-4xl">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-primary">Upcoming Events</h1>
-            <p className="text-muted-foreground mt-1">Find rides to off-campus events</p>
+        <div className="space-y-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-primary">Upcoming Events</h1>
+              <p className="text-muted-foreground mt-1">Find rides to off-campus events</p>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={() => setImportDialogOpen(true)} size="lg" variant="outline">
+                <Calendar className="w-4 h-4 mr-2" />
+                Import Calendar
+              </Button>
+              <Button onClick={() => setCreateDialogOpen(true)} size="lg">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Event
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setImportDialogOpen(true)} size="lg" variant="outline">
-              <Calendar className="w-4 h-4 mr-2" />
-              Import Calendar
-            </Button>
-            <Button onClick={() => setCreateDialogOpen(true)} size="lg">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Event
-            </Button>
+          
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search events by name, destination, or city..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </div>
 
@@ -98,9 +121,16 @@ const Events = () => {
               Create the first event
             </Button>
           </div>
+        ) : filteredEvents.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground mb-4">No events match your search</p>
+            <Button onClick={() => setSearchQuery("")} variant="outline">
+              Clear search
+            </Button>
+          </div>
         ) : (
           <div className="space-y-4">
-            {events.map((event) => (
+            {filteredEvents.map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
           </div>
