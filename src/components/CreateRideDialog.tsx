@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,7 @@ interface CreateRideDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   eventId: string;
+  eventDate?: string;
   onRideCreated: () => void;
 }
 
@@ -24,14 +25,26 @@ export const CreateRideDialog = ({
   open,
   onOpenChange,
   eventId,
+  eventDate,
   onRideCreated,
 }: CreateRideDialogProps) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    date: "",
-    time: "",
+    date: eventDate ? new Date(eventDate).toISOString().split('T')[0] : "",
+    time: eventDate ? new Date(eventDate).toTimeString().slice(0, 5) : "",
     travelMode: "Uber",
   });
+
+  // Update form data when event date changes or dialog opens
+  useEffect(() => {
+    if (open && eventDate) {
+      setFormData({
+        date: new Date(eventDate).toISOString().split('T')[0],
+        time: new Date(eventDate).toTimeString().slice(0, 5),
+        travelMode: "Uber",
+      });
+    }
+  }, [open, eventDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -179,6 +179,7 @@ const EventDetail = () => {
         open={createRideOpen}
         onOpenChange={setCreateRideOpen}
         eventId={eventId!}
+        eventDate={event.date_time}
         onRideCreated={fetchEventData}
       />
     </div>
