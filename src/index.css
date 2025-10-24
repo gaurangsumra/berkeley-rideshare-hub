@@ -8,92 +8,90 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Berkeley Blue & California Gold color system */
+    /* UC Berkeley Official Colors */
+    /* Berkeley Blue: #003262 */
+    /* California Gold: #FDB515 */
+    
     --background: 0 0% 100%;
-    --foreground: 220 68% 19%;
+    --foreground: 209 100% 19%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 68% 19%;
+    --card-foreground: 209 100% 19%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 68% 19%;
+    --popover-foreground: 209 100% 19%;
 
-    /* Berkeley Blue primary */
-    --primary: 220 68% 19%;
+    /* Berkeley Blue - Official #003262 */
+    --primary: 209 100% 19%;
     --primary-foreground: 0 0% 100%;
     
-    /* California Gold accent */
-    --accent: 43 98% 54%;
-    --accent-foreground: 220 68% 19%;
+    /* California Gold - Official #FDB515 */
+    --accent: 41 98% 54%;
+    --accent-foreground: 209 100% 19%;
 
-    --secondary: 220 15% 95%;
-    --secondary-foreground: 220 68% 19%;
+    --secondary: 209 30% 95%;
+    --secondary-foreground: 209 100% 19%;
 
-    --muted: 220 15% 95%;
-    --muted-foreground: 220 20% 50%;
+    --muted: 209 20% 95%;
+    --muted-foreground: 209 30% 50%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 220 68% 19%;
+    --border: 209 20% 90%;
+    --input: 209 20% 90%;
+    --ring: 41 98% 54%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 209 100% 19%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 41 98% 54%;
+    --sidebar-primary-foreground: 209 100% 19%;
+    --sidebar-accent: 209 100% 25%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 209 100% 25%;
+    --sidebar-ring: 41 98% 54%;
   }
 
   .dark {
-    --background: 220 68% 10%;
-    --foreground: 0 0% 98%;
+    --background: 209 100% 8%;
+    --foreground: 41 98% 88%;
 
-    --card: 220 50% 15%;
-    --card-foreground: 0 0% 98%;
+    --card: 209 100% 12%;
+    --card-foreground: 41 98% 88%;
 
-    --popover: 220 50% 15%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 209 100% 12%;
+    --popover-foreground: 41 98% 88%;
 
-    --primary: 43 98% 54%;
-    --primary-foreground: 220 68% 19%;
+    /* Dark mode: California Gold primary, Berkeley Blue foreground */
+    --primary: 41 98% 54%;
+    --primary-foreground: 209 100% 19%;
 
-    --secondary: 220 40% 20%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 209 50% 20%;
+    --secondary-foreground: 41 98% 88%;
 
-    --muted: 220 40% 20%;
-    --muted-foreground: 220 15% 65%;
+    --muted: 209 50% 20%;
+    --muted-foreground: 209 30% 65%;
 
-    --accent: 43 98% 54%;
-    --accent-foreground: 220 68% 19%;
+    --accent: 41 98% 54%;
+    --accent-foreground: 209 100% 19%;
 
     --destructive: 0 62.8% 50%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 40% 25%;
-    --input: 220 40% 25%;
-    --ring: 43 98% 54%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 209 50% 25%;
+    --input: 209 50% 25%;
+    --ring: 41 98% 54%;
+    
+    --sidebar-background: 209 100% 12%;
+    --sidebar-foreground: 41 98% 88%;
+    --sidebar-primary: 41 98% 54%;
+    --sidebar-primary-foreground: 209 100% 19%;
+    --sidebar-accent: 209 100% 18%;
+    --sidebar-accent-foreground: 41 98% 88%;
+    --sidebar-border: 209 50% 25%;
+    --sidebar-ring: 41 98% 54%;
   }
 }
 
