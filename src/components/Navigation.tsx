@@ -12,7 +12,7 @@ export const Navigation = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border">
+    <nav className="fixed bottom-0 left-0 right-0 bg-primary text-primary-foreground border-t border-primary/20">
       <div className="container mx-auto max-w-4xl">
         <div className="flex items-center justify-around py-3">
           {links.map(({ href, icon: Icon, label }) => {
@@ -24,8 +24,8 @@ export const Navigation = () => {
                 className={cn(
                   "flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors",
                   isActive
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "text-accent"
+                    : "text-primary-foreground/70 hover:text-primary-foreground"
                 )}
               >
                 <Icon className="w-5 h-5" />
