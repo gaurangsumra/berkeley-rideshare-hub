@@ -93,7 +93,7 @@ export function ImportCalendarDialog({ open, onOpenChange, onEventsImported }: I
       const vevents = comp.getAllSubcomponents('vevent');
       
       const now = new Date();
-      const twoWeeksFromNow = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+      const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
       
       const parsed: ParsedEvent[] = vevents
         .map(vevent => {
@@ -101,7 +101,7 @@ export function ImportCalendarDialog({ open, onOpenChange, onEventsImported }: I
             const event = new ICAL.Event(vevent);
             const startDate = event.startDate.toJSDate();
             
-            if (startDate < now || startDate > twoWeeksFromNow) {
+            if (startDate < now || startDate > thirtyDaysFromNow) {
               return null;
             }
             
@@ -126,9 +126,9 @@ export function ImportCalendarDialog({ open, onOpenChange, onEventsImported }: I
       setParsedEvents(parsed);
       
       if (parsed.length === 0) {
-        toast.info("No events found in the next 2 weeks");
+        toast.info("No events found in the next 30 days");
       } else {
-        toast.success(`Found ${parsed.length} event(s) in the next 2 weeks`);
+        toast.success(`Found ${parsed.length} event(s) in the next 30 days`);
       }
     } catch (error) {
       toast.error("Failed to parse calendar file. Please check the file format.");
