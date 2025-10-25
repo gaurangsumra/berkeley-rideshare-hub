@@ -215,7 +215,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
   };
 
   return (
-    <Card>
+    <Card className="transition-colors hover:border-accent">
       <CardHeader>
         <div className="flex items-start justify-between">
           <CardTitle className="flex items-center gap-2">

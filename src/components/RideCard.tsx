@@ -27,7 +27,7 @@ export const RideCard = ({ ride }: RideCardProps) => {
 
   return (
     <Card 
-      className="cursor-pointer hover:shadow-md transition-shadow"
+      className="cursor-pointer hover:border-accent transition-colors"
       onClick={() => navigate(`/events/${ride.event_id}`)}
     >
       <CardContent className="p-6">

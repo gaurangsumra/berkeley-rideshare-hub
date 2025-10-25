@@ -21,7 +21,7 @@ export const EventCard = ({ event }: EventCardProps) => {
 
   return (
     <Card 
-      className="cursor-pointer hover:shadow-md transition-shadow"
+      className="cursor-pointer hover:border-accent transition-colors"
       onClick={() => navigate(`/events/${event.id}`)}
     >
       <CardContent className="p-6">
