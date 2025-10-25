@@ -12,13 +12,13 @@ All colors MUST be HSL.
     /* Berkeley Blue: #003262 */
     /* California Gold: #FDB515 */
     
-    --background: 0 0% 100%;
+    --background: 209 60% 97%;
     --foreground: 209 100% 19%;
 
-    --card: 0 0% 100%;
+    --card: 209 40% 98%;
     --card-foreground: 209 100% 19%;
 
-    --popover: 0 0% 100%;
+    --popover: 209 40% 98%;
     --popover-foreground: 209 100% 19%;
 
     /* Berkeley Blue - Official #003262 */
