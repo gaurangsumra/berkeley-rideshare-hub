@@ -61,13 +61,26 @@ const EventDetail = () => {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
         navigate("/auth");
-      } else {
-        setCurrentUserId(session.user.id);
-        fetchEventData();
+        return;
       }
+
+      // Check if user has completed onboarding
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('photo')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profileData?.photo) {
+        navigate("/onboarding");
+        return;
+      }
+
+      setCurrentUserId(session.user.id);
+      fetchEventData();
     });
   }, [eventId, navigate]);
 

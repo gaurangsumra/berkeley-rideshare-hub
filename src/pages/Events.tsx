@@ -37,13 +37,26 @@ const Events = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
         navigate("/auth");
-      } else {
-        setUser(session.user);
-        fetchEvents();
+        return;
       }
+
+      // Check if user has completed onboarding
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('photo')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profileData?.photo) {
+        navigate("/onboarding");
+        return;
+      }
+
+      setUser(session.user);
+      fetchEvents();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {

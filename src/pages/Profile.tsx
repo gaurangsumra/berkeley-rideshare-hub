@@ -22,12 +22,25 @@ const Profile = () => {
   const [editorOpen, setEditorOpen] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
         navigate("/auth");
-      } else {
-        fetchProfile(session.user.id);
+        return;
       }
+
+      // Check if user has completed onboarding
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('photo')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profileData?.photo) {
+        navigate("/onboarding");
+        return;
+      }
+
+      fetchProfile(session.user.id);
     });
   }, [navigate]);
 

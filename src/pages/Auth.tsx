@@ -32,13 +32,13 @@ const Auth = () => {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/events");
+        navigate("/onboarding");
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        navigate("/events");
+        navigate("/onboarding");
       }
     });
 
@@ -102,7 +102,7 @@ const Auth = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/events`,
+          emailRedirectTo: `${window.location.origin}/onboarding`,
           data: {
             name,
             program,
@@ -178,7 +178,7 @@ const Auth = () => {
       }
       
       toast.success("Signed in successfully!");
-      navigate("/events");
+      navigate("/onboarding");
     } catch (error: any) {
       // Error already handled above
     } finally {
@@ -192,7 +192,7 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/events`,
+          redirectTo: `${window.location.origin}/onboarding`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

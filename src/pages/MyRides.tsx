@@ -25,12 +25,25 @@ const MyRides = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
         navigate("/auth");
-      } else {
-        fetchMyRides(session.user.id);
+        return;
       }
+
+      // Check if user has completed onboarding
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('photo')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profileData?.photo) {
+        navigate("/onboarding");
+        return;
+      }
+
+      fetchMyRides(session.user.id);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
