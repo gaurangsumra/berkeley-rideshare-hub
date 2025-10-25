@@ -234,6 +234,7 @@ const EventDetail = () => {
                 rideGroup={group}
                 currentUserId={currentUserId}
                 onUpdate={fetchEventData}
+                isAdmin={isAdmin}
               />
             ))}
           </div>

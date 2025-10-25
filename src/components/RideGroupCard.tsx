@@ -4,12 +4,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Clock, Users, MapPin, UserPlus } from "lucide-react";
+import { Clock, Users, MapPin, UserPlus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { MeetingPointVoting } from "@/components/MeetingPointVoting";
 import { UberPaymentDialog } from "@/components/UberPaymentDialog";
 import { InviteDialog } from "@/components/InviteDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface RideGroup {
   id: string;
@@ -31,14 +41,16 @@ interface RideGroupCardProps {
   rideGroup: RideGroup;
   currentUserId: string | null;
   onUpdate: () => void;
+  isAdmin?: boolean;
 }
 
-export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupCardProps) => {
+export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin = false }: RideGroupCardProps) => {
   const [members, setMembers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
   const [showVoting, setShowVoting] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [leaderMeetingPoint, setLeaderMeetingPoint] = useState<string | null>(null);
 
   const isMember = currentUserId && rideGroup.ride_members.some(m => m.user_id === currentUserId);
@@ -214,6 +226,29 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
     }
   };
 
+  const handleDeleteRide = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('ride_groups')
+        .delete()
+        .eq('id', rideGroup.id);
+
+      if (error) throw error;
+      toast.success("Ride group deleted");
+      onUpdate();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete ride group");
+    } finally {
+      setLoading(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
+  const canDeleteRide = rideGroup.ride_members.length <= 1 && (
+    isAdmin || isMember
+  );
+
   return (
     <Card className="transition-colors hover:border-accent">
       <CardHeader>
@@ -222,7 +257,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
             <Clock className="w-5 h-5" />
             {format(new Date(rideGroup.departure_time), 'h:mm a')}
           </CardTitle>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <Badge variant={rideGroup.travel_mode === 'Uber' ? 'default' : 'secondary'}>
               {rideGroup.travel_mode}
             </Badge>
@@ -230,6 +265,16 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
               <Users className="w-3 h-3 mr-1" />
               {rideGroup.ride_members.length}/{rideGroup.capacity}
             </Badge>
+            {canDeleteRide && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowDeleteDialog(true)}
+                className="h-8 w-8"
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -330,6 +375,27 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate }: RideGroupC
           rideId={rideGroup.id}
         />
       )}
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Ride Group</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this ride group? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteRide}
+              disabled={loading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {loading ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
