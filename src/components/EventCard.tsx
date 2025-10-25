@@ -40,7 +40,15 @@ export const EventCard = ({ event }: EventCardProps) => {
           
           <div className="flex items-center gap-2 text-muted-foreground">
             <MapPin className="w-4 h-4" />
-            <span>{event.destination}, {event.city}</span>
+            <a 
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${event.destination}, ${event.city}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="hover:text-primary hover:underline transition-colors"
+            >
+              {event.destination}, {event.city}
+            </a>
           </div>
         </div>
 

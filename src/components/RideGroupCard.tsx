@@ -263,7 +263,15 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: R
         {(leaderMeetingPoint || rideGroup.meeting_point) && (
           <div className="flex items-center gap-2 text-sm text-primary font-medium p-3 bg-primary/5 rounded-lg">
             <MapPin className="w-4 h-4" />
-            <span>Meeting Point: {leaderMeetingPoint ?? rideGroup.meeting_point}</span>
+            <span>Meeting Point: </span>
+            <a 
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(leaderMeetingPoint ?? rideGroup.meeting_point ?? '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline transition-colors"
+            >
+              {leaderMeetingPoint ?? rideGroup.meeting_point}
+            </a>
           </div>
         )}
 

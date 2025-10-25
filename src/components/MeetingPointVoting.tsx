@@ -213,7 +213,15 @@ export const MeetingPointVoting = ({
           </div>
           {currentMeetingPoint && (
             <p className="text-sm text-muted-foreground">
-              Current: {currentMeetingPoint}
+              Current:{' '}
+              <a 
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentMeetingPoint)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary hover:underline transition-colors"
+              >
+                {currentMeetingPoint}
+              </a>
             </p>
           )}
         </CardHeader>
@@ -231,7 +239,14 @@ export const MeetingPointVoting = ({
                     onCheckedChange={() => handleToggleVote(option)}
                     disabled={loading}
                   />
-                  <span className="text-sm">{option}</span>
+                  <a 
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(option)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm hover:text-primary hover:underline transition-colors"
+                  >
+                    {option}
+                  </a>
                 </div>
                 <Badge variant="outline">
                   {votes[option] || 0} votes
@@ -255,7 +270,16 @@ export const MeetingPointVoting = ({
           {topVote && (
             <div className="p-3 bg-primary/5 rounded-lg">
               <p className="text-sm font-medium text-primary">
-                Leading: {topVote[0]} ({topVote[1]} votes)
+                Leading:{' '}
+                <a 
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(topVote[0])}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline"
+                >
+                  {topVote[0]}
+                </a>
+                {' '}({topVote[1]} votes)
               </p>
             </div>
           )}
