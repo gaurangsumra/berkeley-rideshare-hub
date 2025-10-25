@@ -9,6 +9,7 @@ import { Navigation } from "@/components/Navigation";
 import { toast } from "sonner";
 import { LogOut, User, Upload, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PhotoEditorDialog } from "@/components/PhotoEditorDialog";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -17,6 +18,8 @@ const Profile = () => {
   const [program, setProgram] = useState("");
   const [uploading, setUploading] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -66,7 +69,7 @@ const Profile = () => {
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !profile) return;
+    if (!file) return;
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -79,6 +82,14 @@ const Profile = () => {
       toast.error("Image must be less than 10MB");
       return;
     }
+
+    // Open editor dialog instead of immediate upload
+    setSelectedFile(file);
+    setEditorOpen(true);
+  };
+
+  const handleSaveCroppedPhoto = async (croppedBlob: Blob) => {
+    if (!profile) return;
 
     try {
       setUploading(true);
@@ -93,14 +104,13 @@ const Profile = () => {
         }
       }
 
-      // Upload new photo
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
+      // Upload cropped photo
+      const fileName = `${Date.now()}.png`;
       const filePath = `${profile.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('profile-photos')
-        .upload(filePath, file);
+        .upload(filePath, croppedBlob);
 
       if (uploadError) throw uploadError;
 
@@ -119,6 +129,8 @@ const Profile = () => {
 
       setPhotoUrl(publicUrl);
       setProfile({ ...profile, photo: publicUrl });
+      setEditorOpen(false);
+      setSelectedFile(null);
       toast.success("Profile photo updated successfully");
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -276,6 +288,17 @@ const Profile = () => {
       </div>
 
       <Navigation />
+
+      <PhotoEditorDialog
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        imageFile={selectedFile}
+        onSave={handleSaveCroppedPhoto}
+        onCancel={() => {
+          setEditorOpen(false);
+          setSelectedFile(null);
+        }}
+      />
     </div>
   );
 };
