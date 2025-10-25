@@ -4,11 +4,29 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, MapPin, Clock, Plus, Users } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Clock, Plus, Users, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { CreateRideDialog } from "@/components/CreateRideDialog";
 import { RideGroupCard } from "@/components/RideGroupCard";
+import { EditEventDialog } from "@/components/EditEventDialog";
+import { useUserRole } from "@/hooks/useUserRole";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Event {
   id: string;
@@ -17,6 +35,7 @@ interface Event {
   destination: string;
   city: string;
   description: string | null;
+  created_by: string;
 }
 
 interface RideGroup {
@@ -35,7 +54,11 @@ const EventDetail = () => {
   const [rideGroups, setRideGroups] = useState<RideGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [createRideOpen, setCreateRideOpen] = useState(false);
+  const [editEventOpen, setEditEventOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const { isAdmin, loading: roleLoading } = useUserRole();
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -75,6 +98,33 @@ const EventDetail = () => {
     }
   };
 
+  const handleDeleteEvent = async () => {
+    if (!eventId) return;
+
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      toast.success("Event deleted successfully");
+      navigate("/events");
+    } catch (error: any) {
+      console.error('Error deleting event:', error);
+      toast.error(error.message || "Failed to delete event");
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
+  const canModifyEvent = event && currentUserId && (
+    event.created_by === currentUserId || isAdmin
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -110,7 +160,31 @@ const EventDetail = () => {
 
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="text-2xl">{event.name}</CardTitle>
+            <div className="flex items-start justify-between">
+              <CardTitle className="text-2xl">{event.name}</CardTitle>
+              {canModifyEvent && !roleLoading && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setEditEventOpen(true)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit Event
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setDeleteDialogOpen(true)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Event
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -182,6 +256,37 @@ const EventDetail = () => {
         eventDate={event.date_time}
         onRideCreated={fetchEventData}
       />
+
+      {event && (
+        <EditEventDialog
+          open={editEventOpen}
+          onOpenChange={setEditEventOpen}
+          event={event}
+          onEventUpdated={fetchEventData}
+        />
+      )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Event</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{event?.name}"? This action cannot be undone.
+              All ride groups associated with this event will also be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteEvent}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
