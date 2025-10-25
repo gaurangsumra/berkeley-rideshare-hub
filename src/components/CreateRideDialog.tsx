@@ -29,9 +29,18 @@ export const CreateRideDialog = ({
   onRideCreated,
 }: CreateRideDialogProps) => {
   const [loading, setLoading] = useState(false);
+  
+  const calculateDefaultTime = (eventDate: string): string => {
+    const eventDateTime = new Date(eventDate);
+    // Subtract 1 hour (3600000 milliseconds)
+    const departureTime = new Date(eventDateTime.getTime() - 60 * 60 * 1000);
+    // Format as HH:MM for input[type="time"]
+    return departureTime.toTimeString().slice(0, 5);
+  };
+
   const [formData, setFormData] = useState({
     date: eventDate ? new Date(eventDate).toISOString().split('T')[0] : "",
-    time: eventDate ? new Date(eventDate).toTimeString().slice(0, 5) : "",
+    time: eventDate ? calculateDefaultTime(eventDate) : "",
     travelMode: "Rideshare (Uber/Lyft)",
   });
 
@@ -40,11 +49,11 @@ export const CreateRideDialog = ({
     if (open && eventDate) {
       setFormData({
         date: new Date(eventDate).toISOString().split('T')[0],
-        time: new Date(eventDate).toTimeString().slice(0, 5),
+        time: calculateDefaultTime(eventDate),
         travelMode: "Rideshare (Uber/Lyft)",
       });
     }
-  }, [open, eventDate]);
+  }, [open, eventDate, calculateDefaultTime]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
