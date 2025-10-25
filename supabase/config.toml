@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.google-calendar-fetch]
 verify_jwt = true
+
+[functions.send-ride-invite]
+verify_jwt = true

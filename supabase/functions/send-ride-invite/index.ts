@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { Resend } from "npm:resend@2.0.0";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -130,7 +130,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw insertError;
     }
 
-    const registrationLink = `${Deno.env.get('SUPABASE_URL').replace('.supabase.co', '.lovable.app')}/auth?invite=${inviteToken}`;
+    const registrationLink = `${Deno.env.get('SUPABASE_URL')!.replace('.supabase.co', '.lovable.app')}/auth?invite=${inviteToken}`;
 
     const eventDate = new Date(event.date_time).toLocaleDateString('en-US', {
       weekday: 'long',
