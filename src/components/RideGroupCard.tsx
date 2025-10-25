@@ -265,7 +265,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: R
             <MapPin className="w-4 h-4" />
             <span>Meeting Point: </span>
             <a 
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(leaderMeetingPoint ?? rideGroup.meeting_point ?? '')}`}
+              href={`https://www.google.com/maps?q=${encodeURIComponent(leaderMeetingPoint ?? rideGroup.meeting_point ?? '')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="hover:underline transition-colors"

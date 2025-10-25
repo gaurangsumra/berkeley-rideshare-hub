@@ -215,7 +215,7 @@ export const MeetingPointVoting = ({
             <p className="text-sm text-muted-foreground">
               Current:{' '}
               <a 
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(currentMeetingPoint)}`}
+                href={`https://www.google.com/maps?q=${encodeURIComponent(currentMeetingPoint)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-primary hover:underline transition-colors"
@@ -240,7 +240,7 @@ export const MeetingPointVoting = ({
                     disabled={loading}
                   />
                   <a 
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(option)}`}
+                    href={`https://www.google.com/maps?q=${encodeURIComponent(option)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm hover:text-primary hover:underline transition-colors"
@@ -272,7 +272,7 @@ export const MeetingPointVoting = ({
               <p className="text-sm font-medium text-primary">
                 Leading:{' '}
                 <a 
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(topVote[0])}`}
+                  href={`https://www.google.com/maps?q=${encodeURIComponent(topVote[0])}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:underline"
