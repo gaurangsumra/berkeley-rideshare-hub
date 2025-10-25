@@ -18,6 +18,7 @@ const Auth = () => {
   const [program, setProgram] = useState("");
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [inviteRideId, setInviteRideId] = useState<string | null>(null);
+  const [inviteDetails, setInviteDetails] = useState<any>(null);
 
   useEffect(() => {
     // Check for invite token in URL
@@ -47,31 +48,49 @@ const Auth = () => {
 
   const validateInviteToken = async (token: string) => {
     try {
-      const { data, error } = await supabase
+      const { data: inviteData, error } = await supabase
         .from('ride_invites')
-        .select('ride_id, expires_at, max_uses, use_count')
+        .select(`
+          ride_id, 
+          expires_at, 
+          max_uses, 
+          use_count,
+          invited_email,
+          inviter_name,
+          ride_groups (
+            id,
+            travel_mode,
+            events (
+              name,
+              destination,
+              city
+            )
+          )
+        `)
         .eq('invite_token', token)
         .single();
 
-      if (error || !data) {
+      if (error || !inviteData) {
         toast.error("Invalid invite link");
         return;
       }
 
-      // Check if expired
-      if (new Date(data.expires_at) < new Date()) {
+      if (new Date(inviteData.expires_at) < new Date()) {
         toast.error("This invite link has expired");
         return;
       }
 
-      // Check if max uses reached
-      if (data.max_uses && data.use_count >= data.max_uses) {
+      if (inviteData.max_uses && inviteData.use_count >= inviteData.max_uses) {
         toast.error("This invite link has reached its maximum uses");
         return;
       }
 
-      setInviteRideId(data.ride_id);
-      toast.success("You've been invited to join a ride! Please sign up or sign in to continue.");
+      setInviteRideId(inviteData.ride_id);
+      setInviteDetails(inviteData);
+      if (inviteData.invited_email) {
+        setEmail(inviteData.invited_email);
+      }
+      toast.success("You've been invited to join a ride! Please create your account to continue.");
     } catch (error: any) {
       toast.error("Failed to validate invite link");
     }
@@ -91,8 +110,13 @@ const Auth = () => {
       return;
     }
 
-    if (!name || !program) {
-      toast.error("Please fill in all fields");
+    if (!name) {
+      toast.error("Please enter your name");
+      return;
+    }
+    
+    if (!inviteToken && !program) {
+      toast.error("Please enter your program");
       return;
     }
 
@@ -105,7 +129,7 @@ const Auth = () => {
           emailRedirectTo: `${window.location.origin}/onboarding`,
           data: {
             name,
-            program,
+            program: program || 'Not specified',
             is_invited_user: !!inviteToken,
             invited_via_ride_id: inviteRideId
           }
@@ -114,17 +138,7 @@ const Auth = () => {
 
       if (error) throw error;
 
-      // If invited user, update their profile and increment invite use count
       if (inviteToken && data.user) {
-        await supabase
-          .from('profiles')
-          .update({ 
-            is_invited_user: true, 
-            invited_via_ride_id: inviteRideId 
-          })
-          .eq('id', data.user.id);
-
-        // Increment use count
         const { data: inviteData } = await supabase
           .from('ride_invites')
           .select('use_count')
@@ -216,6 +230,18 @@ const Auth = () => {
           <p className="text-muted-foreground">Trusted ride coordination for UC Berkeley students</p>
         </div>
 
+        {inviteDetails && (
+          <Card className="bg-primary/5 border-primary">
+            <CardContent className="pt-6">
+              <p className="text-sm font-medium mb-2">🎉 You're invited!</p>
+              <p className="text-sm text-muted-foreground">
+                <strong>{inviteDetails.inviter_name}</strong> invited you to join their ride to{' '}
+                <strong>{inviteDetails.ride_groups?.events?.name}</strong>
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>Welcome to Berkeley Rides</CardTitle>
@@ -287,17 +313,19 @@ const Auth = () => {
                        required
                      />
                    </div>
-                  <div>
-                    <Label htmlFor="signup-program">Program *</Label>
-                    <Input
-                      id="signup-program"
-                      type="text"
-                      placeholder="e.g., Haas MBA, MEng, Undergraduate"
-                      value={program}
-                      onChange={(e) => setProgram(e.target.value)}
-                      required
-                    />
-                  </div>
+                   {!inviteToken && (
+                     <div>
+                       <Label htmlFor="signup-program">Program *</Label>
+                       <Input
+                         id="signup-program"
+                         type="text"
+                         placeholder="e.g., Haas MBA, MEng, Undergraduate"
+                         value={program}
+                         onChange={(e) => setProgram(e.target.value)}
+                         required
+                       />
+                     </div>
+                   )}
                   <div>
                     <Label htmlFor="signup-password">Password *</Label>
                     <Input

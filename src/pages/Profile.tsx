@@ -269,23 +269,32 @@ const Profile = () => {
               <Label>Email</Label>
               <Input value={profile.email} disabled className="mt-1" />
             </div>
-            <div>
-              <Label htmlFor="program">Program</Label>
-              <Input
-                id="program"
-                value={program}
-                onChange={(e) => setProgram(e.target.value)}
-                placeholder="e.g., Haas MBA, MEng, Undergraduate"
-                className="mt-1"
-              />
-              <Button
-                onClick={handleUpdateProgram}
-                disabled={loading || program === profile.program}
-                className="mt-2"
-              >
-                Update Program
-              </Button>
-            </div>
+            {!profile.is_invited_user && (
+              <div>
+                <Label htmlFor="program">Program</Label>
+                <Input
+                  id="program"
+                  value={program}
+                  onChange={(e) => setProgram(e.target.value)}
+                  placeholder="e.g., Haas MBA, MEng, Undergraduate"
+                  className="mt-1"
+                />
+                <Button
+                  onClick={handleUpdateProgram}
+                  disabled={loading || program === profile.program}
+                  className="mt-2"
+                >
+                  Update Program
+                </Button>
+              </div>
+            )}
+            {profile.is_invited_user && (
+              <div className="bg-muted p-3 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  👥 <strong>Guest User</strong> - Invited to Berkeley Rides
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

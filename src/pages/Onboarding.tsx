@@ -117,7 +117,23 @@ const Onboarding = () => {
       toast.error("Please upload a profile photo to continue");
       return;
     }
-    navigate("/events");
+    
+    if (profile.is_invited_user && profile.invited_via_ride_id) {
+      supabase
+        .from('ride_groups')
+        .select('event_id')
+        .eq('id', profile.invited_via_ride_id)
+        .single()
+        .then(({ data }) => {
+          if (data?.event_id) {
+            navigate(`/events/${data.event_id}`);
+          } else {
+            navigate("/events");
+          }
+        });
+    } else {
+      navigate("/events");
+    }
   };
 
   if (!profile) {

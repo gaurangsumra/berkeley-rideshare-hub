@@ -158,12 +158,15 @@ const Events = () => {
             ))}
           </div>
         ) : events.length === 0 && !searchQuery ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground mb-4">No upcoming events yet</p>
-            <Button onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create the first event
-            </Button>
+          <div className="text-center py-12 space-y-4">
+            <div className="text-6xl mb-4">🎫</div>
+            <div>
+              <p className="font-medium text-lg mb-2">No Events Available</p>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                You don't have access to any events yet. Berkeley students can create events, 
+                or join rides you've been invited to.
+              </p>
+            </div>
           </div>
         ) : events.length === 0 && searchQuery ? (
           <div className="text-center py-12">

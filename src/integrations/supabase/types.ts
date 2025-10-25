@@ -62,6 +62,59 @@ export type Database = {
           },
         ]
       }
+      event_access: {
+        Row: {
+          event_id: string
+          granted_at: string | null
+          granted_via_ride_id: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          event_id: string
+          granted_at?: string | null
+          granted_via_ride_id?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          event_id?: string
+          granted_at?: string | null
+          granted_via_ride_id?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_access_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_access_granted_via_ride_id_fkey"
+            columns: ["granted_via_ride_id"]
+            isOneToOne: false
+            referencedRelation: "ride_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           city: string
@@ -168,7 +221,7 @@ export type Database = {
           is_invited_user: boolean | null
           name: string
           photo: string | null
-          program: string
+          program: string | null
         }
         Insert: {
           created_at?: string | null
@@ -178,7 +231,7 @@ export type Database = {
           is_invited_user?: boolean | null
           name: string
           photo?: string | null
-          program: string
+          program?: string | null
         }
         Update: {
           created_at?: string | null
@@ -188,7 +241,7 @@ export type Database = {
           is_invited_user?: boolean | null
           name?: string
           photo?: string | null
-          program?: string
+          program?: string | null
         }
         Relationships: [
           {
@@ -262,6 +315,8 @@ export type Database = {
           expires_at: string
           id: string
           invite_token: string
+          invited_email: string | null
+          inviter_name: string | null
           max_uses: number | null
           ride_id: string
           use_count: number
@@ -272,6 +327,8 @@ export type Database = {
           expires_at?: string
           id?: string
           invite_token: string
+          invited_email?: string | null
+          inviter_name?: string | null
           max_uses?: number | null
           ride_id: string
           use_count?: number
@@ -282,6 +339,8 @@ export type Database = {
           expires_at?: string
           id?: string
           invite_token?: string
+          invited_email?: string | null
+          inviter_name?: string | null
           max_uses?: number | null
           ride_id?: string
           use_count?: number

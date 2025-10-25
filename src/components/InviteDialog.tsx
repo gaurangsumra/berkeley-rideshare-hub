@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Copy, Check } from "lucide-react";
+import { Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface InviteDialogProps {
@@ -13,53 +14,56 @@ interface InviteDialogProps {
 }
 
 export const InviteDialog = ({ open, onOpenChange, rideId }: InviteDialogProps) => {
-  const [inviteLink, setInviteLink] = useState<string>("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  const generateInvite = async () => {
+  const handleSendInvite = async () => {
+    if (!email.trim()) {
+      toast.error("Please enter an email address");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     try {
       setLoading(true);
       
-      // Generate a unique invite token
-      const inviteToken = crypto.randomUUID();
-      
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast.error("You must be logged in to generate invites");
+        toast.error("You must be logged in to send invites");
         return;
       }
 
-      // Insert into ride_invites table
-      const { error } = await supabase
-        .from('ride_invites')
-        .insert({
-          ride_id: rideId,
-          invite_token: inviteToken,
-          created_by: session.user.id
-        });
+      const { data, error } = await supabase.functions.invoke('send-ride-invite', {
+        body: { 
+          rideId, 
+          recipientEmail: email 
+        }
+      });
 
       if (error) throw error;
 
-      // Generate invite link
-      const link = `${window.location.origin}/auth?invite=${inviteToken}`;
-      setInviteLink(link);
-      toast.success("Invite link generated!");
+      if (data?.existingUser) {
+        toast.success("User already exists - they've been granted access to this ride!");
+      } else {
+        toast.success("Invite sent successfully! They'll receive an email with a registration link.");
+      }
+      
+      setSuccess(true);
+      setTimeout(() => {
+        setEmail("");
+        setSuccess(false);
+        onOpenChange(false);
+      }, 2000);
     } catch (error: any) {
-      toast.error(error.message || "Failed to generate invite link");
+      toast.error(error.message || "Failed to send invite");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(inviteLink);
-      setCopied(true);
-      toast.success("Invite link copied to clipboard!");
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      toast.error("Failed to copy to clipboard");
     }
   };
 
@@ -69,38 +73,53 @@ export const InviteDialog = ({ open, onOpenChange, rideId }: InviteDialogProps) 
         <DialogHeader>
           <DialogTitle>Invite Someone to This Ride</DialogTitle>
           <DialogDescription>
-            Generate a shareable invite link that allows non-Berkeley users to join this ride group.
-            The link expires in 3 days or after one use.
+            Enter their email address and we'll send them an invitation to join this ride.
+            Non-Berkeley users are welcome!
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {!inviteLink ? (
-            <Button onClick={generateInvite} disabled={loading} className="w-full">
-              {loading ? "Generating..." : "Generate Invite Link"}
-            </Button>
-          ) : (
-            <div className="space-y-3">
+          {!success ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="invite-email">Email Address</Label>
+                <Input
+                  id="invite-email"
+                  type="email"
+                  placeholder="friend@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendInvite()}
+                  disabled={loading}
+                />
+                <p className="text-sm text-muted-foreground">
+                  They'll receive an email with a registration link that expires in 3 days.
+                </p>
+              </div>
               <div className="flex gap-2">
-                <Input value={inviteLink} readOnly className="flex-1" />
-                <Button onClick={copyToClipboard} size="icon" variant="outline">
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                <Button 
+                  onClick={handleSendInvite} 
+                  disabled={loading} 
+                  className="flex-1"
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  {loading ? "Sending..." : "Send Invite"}
+                </Button>
+                <Button 
+                  onClick={() => onOpenChange(false)} 
+                  variant="outline"
+                  disabled={loading}
+                >
+                  Cancel
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Share this link with anyone you'd like to invite to this ride. They'll be able to sign up
-                even without a @berkeley.edu email.
+            </>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-lg font-medium text-green-600">✓ Invite Sent!</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Closing automatically...
               </p>
-              <Button 
-                onClick={() => {
-                  setInviteLink("");
-                  onOpenChange(false);
-                }} 
-                variant="outline" 
-                className="w-full"
-              >
-                Done
-              </Button>
             </div>
           )}
         </div>
