@@ -41,10 +41,10 @@ interface RideGroupCardProps {
   rideGroup: RideGroup;
   currentUserId: string | null;
   onUpdate: () => void;
-  isAdmin?: boolean;
+  isAdmin: boolean;
 }
 
-export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin = false }: RideGroupCardProps) => {
+export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: RideGroupCardProps) => {
   const [members, setMembers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
   const [showVoting, setShowVoting] = useState(false);
@@ -55,6 +55,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin = fa
 
   const isMember = currentUserId && rideGroup.ride_members.some(m => m.user_id === currentUserId);
   const isFull = rideGroup.ride_members.length >= rideGroup.capacity;
+  const canDeleteRide = rideGroup.ride_members.length <= 1 && (isAdmin || isMember);
 
   useEffect(() => {
     fetchMembers();
@@ -167,23 +168,6 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin = fa
     }
   };
 
-  // Keep leader in sync with votes (realtime)
-  useEffect(() => {
-    fetchLeader();
-    const channel = supabase
-      .channel(`meeting_votes_${rideGroup.id}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'meeting_votes', filter: `ride_id=eq.${rideGroup.id}` },
-        () => fetchLeader()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [rideGroup.id]);
-
   const handleJoinRide = async () => {
     if (!currentUserId) return;
     
@@ -244,10 +228,6 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin = fa
       setShowDeleteDialog(false);
     }
   };
-
-  const canDeleteRide = rideGroup.ride_members.length <= 1 && (
-    isAdmin || isMember
-  );
 
   return (
     <Card className="transition-colors hover:border-accent">
