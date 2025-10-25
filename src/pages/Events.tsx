@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Calendar, Search, ChevronDown, Upload } from "lucide-react";
+import { Plus, Calendar, Search, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { Navigation } from "@/components/Navigation";
 import { EventCard } from "@/components/EventCard";
@@ -94,58 +94,6 @@ const Events = () => {
     []
   );
 
-  const handleImportEventbrite = async () => {
-    const loadingToast = toast.loading("Importing Bay Area events from Eventbrite...");
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('eventbrite-search', {
-        body: {}
-      });
-      
-      if (error) throw error;
-      
-      const events = data.events || [];
-      
-      if (events.length === 0) {
-        toast.dismiss(loadingToast);
-        toast.info("No new events found in the Bay Area for the next 30 days");
-        return;
-      }
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.dismiss(loadingToast);
-        toast.error("You must be logged in to import events");
-        return;
-      }
-      
-      const { error: insertError } = await supabase
-        .from('events')
-        .insert(
-          events.map((event: any) => ({
-            name: event.name,
-            date_time: event.date_time,
-            destination: event.destination,
-            city: event.city,
-            description: event.description,
-            created_by: session.user.id
-          }))
-        );
-      
-      if (insertError) throw insertError;
-      
-      toast.dismiss(loadingToast);
-      toast.success(`Successfully imported ${events.length} events from the Bay Area! 🎉`);
-      
-      fetchEvents();
-      
-    } catch (error: any) {
-      toast.dismiss(loadingToast);
-      console.error('Import error:', error);
-      toast.error(error.message || "Failed to import events from Eventbrite");
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="container mx-auto px-4 py-6 max-w-4xl">
@@ -155,31 +103,25 @@ const Events = () => {
               <h1 className="text-3xl font-bold text-primary">Upcoming Events</h1>
               <p className="text-muted-foreground mt-1">Find rides to off-campus events</p>
             </div>
-            <div className="flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="lg">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Event
-                    <ChevronDown className="w-4 h-4 ml-2" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Import Calendar
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setCreateDialogOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Event Manually
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button onClick={handleImportEventbrite} size="lg" variant="outline">
-                <Upload className="w-4 h-4 mr-2" />
-                Import Eventbrite
-              </Button>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="lg">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Event
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Import Calendar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setCreateDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Event Manually
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           
           <div className="relative">
