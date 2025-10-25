@@ -10,6 +10,10 @@ interface Ride {
   departure_time: string;
   travel_mode: string;
   meeting_point: string | null;
+  driver?: {
+    name: string;
+    photo: string | null;
+  };
   events: {
     name: string;
     destination: string;
@@ -24,6 +28,7 @@ interface RideCardProps {
 
 export const RideCard = ({ ride }: RideCardProps) => {
   const navigate = useNavigate();
+  const isCarpool = ride.travel_mode === 'Carpool (Student Driver)';
 
   return (
     <Card 
@@ -33,10 +38,17 @@ export const RideCard = ({ ride }: RideCardProps) => {
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-3">
           <h3 className="text-xl font-semibold text-primary">{ride.events.name}</h3>
-          <Badge variant={ride.travel_mode === 'Uber' ? 'default' : 'secondary'}>
-            {ride.travel_mode}
+          <Badge variant={ride.travel_mode.includes('Rideshare') ? 'default' : 'secondary'}>
+            {isCarpool ? 'Carpool' : 'Rideshare'}
           </Badge>
         </div>
+        
+        {isCarpool && ride.driver && (
+          <div className="mb-3 p-2 bg-accent/10 rounded-md">
+            <p className="text-xs text-muted-foreground mb-1">Driver</p>
+            <p className="text-sm font-medium">{ride.driver.name}</p>
+          </div>
+        )}
         
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2 text-muted-foreground">

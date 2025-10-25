@@ -44,7 +44,7 @@ interface RideGroup {
   travel_mode: string;
   meeting_point: string | null;
   capacity: number;
-  ride_members: { user_id: string }[];
+  ride_members: { user_id: string; role: string | null }[];
 }
 
 const EventDetail = () => {
@@ -94,7 +94,7 @@ const EventDetail = () => {
           .from('ride_groups')
           .select(`
             *,
-            ride_members (user_id)
+            ride_members (user_id, role)
           `)
           .eq('event_id', eventId)
       ]);

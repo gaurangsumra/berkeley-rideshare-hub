@@ -32,7 +32,7 @@ export const CreateRideDialog = ({
   const [formData, setFormData] = useState({
     date: eventDate ? new Date(eventDate).toISOString().split('T')[0] : "",
     time: eventDate ? new Date(eventDate).toTimeString().slice(0, 5) : "",
-    travelMode: "Uber",
+    travelMode: "Rideshare (Uber/Lyft)",
   });
 
   // Update form data when event date changes or dialog opens
@@ -41,7 +41,7 @@ export const CreateRideDialog = ({
       setFormData({
         date: new Date(eventDate).toISOString().split('T')[0],
         time: new Date(eventDate).toTimeString().slice(0, 5),
-        travelMode: "Uber",
+        travelMode: "Rideshare (Uber/Lyft)",
       });
     }
   }, [open, eventDate]);
@@ -75,12 +75,15 @@ export const CreateRideDialog = ({
 
       if (rideError) throw rideError;
 
+      const role = formData.travelMode === 'Carpool (Student Driver)' ? 'driver' : null;
+      
       const { error: memberError } = await supabase
         .from('ride_members')
         .insert({
           ride_id: rideGroup.id,
           user_id: session.user.id,
           status: 'joined',
+          role: role,
         });
 
       if (memberError) throw memberError;
@@ -88,7 +91,7 @@ export const CreateRideDialog = ({
       toast.success("Ride group created successfully!");
       onOpenChange(false);
       onRideCreated();
-      setFormData({ date: "", time: "", travelMode: "Uber" });
+      setFormData({ date: "", time: "", travelMode: "Rideshare (Uber/Lyft)" });
     } catch (error: any) {
       toast.error(error.message || "Failed to create ride group");
     } finally {
@@ -135,19 +138,31 @@ export const CreateRideDialog = ({
             <RadioGroup
               value={formData.travelMode}
               onValueChange={(value) => setFormData({ ...formData, travelMode: value })}
-              className="mt-2"
+              className="mt-2 space-y-3"
             >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Uber" id="uber" />
-                <Label htmlFor="uber" className="font-normal cursor-pointer">
-                  Uber (Cost will be split)
-                </Label>
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="Rideshare (Uber/Lyft)" id="rideshare" />
+                  <Label htmlFor="rideshare" className="font-normal cursor-pointer">
+                    Rideshare (Splitting an Uber/Lyft)
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground ml-6">
+                  No car needed - split the cost with the group
+                </p>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Self-Driving" id="driving" />
-                <Label htmlFor="driving" className="font-normal cursor-pointer">
-                  Self-Driving
-                </Label>
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="Carpool (Student Driver)" id="carpool" />
+                  <Label htmlFor="carpool" className="font-normal cursor-pointer">
+                    Carpool (Student Driver Needed)
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground ml-6">
+                  {formData.travelMode === 'Carpool (Student Driver)' 
+                    ? "✓ You'll be the driver for this ride" 
+                    : "You'll drive your car and offer rides"}
+                </p>
               </div>
             </RadioGroup>
           </div>

@@ -27,7 +27,7 @@ interface RideGroup {
   travel_mode: string;
   meeting_point: string | null;
   capacity: number;
-  ride_members: { user_id: string }[];
+  ride_members: { user_id: string; role: string | null }[];
 }
 
 interface Profile {
@@ -54,8 +54,14 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: R
   const [leaderMeetingPoint, setLeaderMeetingPoint] = useState<string | null>(null);
 
   const isMember = currentUserId && rideGroup.ride_members.some(m => m.user_id === currentUserId);
+  const isDriver = currentUserId && rideGroup.ride_members.some(m => m.user_id === currentUserId && m.role === 'driver');
   const isFull = rideGroup.ride_members.length >= rideGroup.capacity;
   const canDeleteRide = rideGroup.ride_members.length <= 1 && (isAdmin || isMember);
+  const driver = members.find(m => 
+    rideGroup.ride_members.find(rm => rm.user_id === m.id && rm.role === 'driver')
+  );
+  const isCarpool = rideGroup.travel_mode === 'Carpool (Student Driver)';
+  const passengerCount = rideGroup.ride_members.filter(m => m.role !== 'driver').length;
 
   useEffect(() => {
     fetchMembers();
@@ -80,7 +86,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: R
 
   // Auto-prompt for Uber payment 1 hour before departure
   useEffect(() => {
-    if (!isMember || rideGroup.travel_mode !== 'Uber') return;
+    if (!isMember || !rideGroup.travel_mode.includes('Rideshare')) return;
     
     const checkTime = () => {
       const departureTime = new Date(rideGroup.departure_time);
@@ -173,14 +179,20 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: R
     
     try {
       setLoading(true);
+      const role = isCarpool ? 'passenger' : null;
+      
       const { error } = await supabase.from('ride_members').insert({
         ride_id: rideGroup.id,
         user_id: currentUserId,
         status: 'joined',
+        role: role,
       });
 
       if (error) throw error;
-      toast.success("Joined ride group!");
+      const message = role === 'passenger' 
+        ? `Joined as passenger in ${driver?.name}'s ride!` 
+        : "Joined ride group!";
+      toast.success(message);
       onUpdate();
     } catch (error: any) {
       toast.error(error.message || "Failed to join ride");
@@ -238,12 +250,15 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: R
             {format(new Date(rideGroup.departure_time), 'h:mm a')}
           </CardTitle>
           <div className="flex gap-2 items-center">
-            <Badge variant={rideGroup.travel_mode === 'Uber' ? 'default' : 'secondary'}>
-              {rideGroup.travel_mode}
+            <Badge variant={rideGroup.travel_mode.includes('Rideshare') ? 'default' : 'secondary'}>
+              {rideGroup.travel_mode.includes('Rideshare') ? 'Rideshare (Uber/Lyft)' : 'Carpool'}
             </Badge>
             <Badge variant="outline">
               <Users className="w-3 h-3 mr-1" />
-              {rideGroup.ride_members.length}/{rideGroup.capacity}
+              {isCarpool 
+                ? `${passengerCount} passenger${passengerCount !== 1 ? 's' : ''} + driver`
+                : `${rideGroup.ride_members.length}/${rideGroup.capacity}`
+              }
             </Badge>
             {canDeleteRide && (
               <Button
@@ -275,10 +290,28 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: R
           </div>
         )}
 
+        {isCarpool && driver && (
+          <div className="bg-accent/10 p-3 rounded-lg mb-3">
+            <p className="text-xs font-medium text-muted-foreground mb-2">DRIVER</p>
+            <div className="flex items-center gap-3">
+              <Avatar className="w-10 h-10 border-2 border-primary">
+                <AvatarImage src={driver.photo || undefined} />
+                <AvatarFallback>{driver.name[0]}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-semibold">{driver.name}</p>
+                <p className="text-xs text-muted-foreground">{driver.program}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div>
-          <p className="text-sm font-medium mb-2">Members:</p>
+          <p className="text-sm font-medium mb-2">
+            {isCarpool ? 'Passengers:' : 'Members:'}
+          </p>
           <div className="space-y-2">
-            {members.map((member) => (
+            {members.filter(m => !isCarpool || m.id !== driver?.id).map((member) => (
               <div key={member.id} className="flex items-center gap-3">
                 <Avatar className="w-8 h-8">
                   <AvatarImage src={member.photo || undefined} />
@@ -303,14 +336,25 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: R
           )}
           {isMember && (
             <>
-              <Button
-                onClick={handleLeaveRide}
-                variant="outline"
-                disabled={loading}
-                className="flex-1"
-              >
-                Leave Ride
-              </Button>
+              {isDriver ? (
+                <Button
+                  variant="outline"
+                  disabled
+                  className="flex-1"
+                  title="As the driver, you cannot leave. Delete the ride group instead."
+                >
+                  Driver Cannot Leave
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleLeaveRide}
+                  variant="outline"
+                  disabled={loading}
+                  className="flex-1"
+                >
+                  Leave Ride
+                </Button>
+              )}
               <Button
                 onClick={() => setShowVoting(true)}
                 variant="outline"
@@ -324,7 +368,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: R
               >
                 <UserPlus className="w-4 h-4" />
               </Button>
-              {rideGroup.travel_mode === 'Uber' && (
+              {rideGroup.travel_mode.includes('Rideshare') && (
                 <Button
                   onClick={() => setShowPayment(true)}
                   variant="default"

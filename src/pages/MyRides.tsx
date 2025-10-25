@@ -11,6 +11,10 @@ interface Ride {
   departure_time: string;
   travel_mode: string;
   meeting_point: string | null;
+  driver?: {
+    name: string;
+    photo: string | null;
+  };
   events: {
     name: string;
     destination: string;
@@ -67,6 +71,14 @@ const MyRides = () => {
             departure_time,
             travel_mode,
             meeting_point,
+            ride_members!inner (
+              user_id,
+              role,
+              profiles:user_id (
+                name,
+                photo
+              )
+            ),
             events (
               name,
               destination,
@@ -83,14 +95,21 @@ const MyRides = () => {
 
       const formattedRides = data
         ?.filter(item => item.ride_groups)
-        .map(item => ({
-          id: item.ride_groups.id,
-          event_id: item.ride_groups.event_id,
-          departure_time: item.ride_groups.departure_time,
-          travel_mode: item.ride_groups.travel_mode,
-          meeting_point: item.ride_groups.meeting_point,
-          events: item.ride_groups.events
-        })) || [];
+        .map(item => {
+          const driverMember = item.ride_groups.ride_members?.find(m => m.role === 'driver');
+          return {
+            id: item.ride_groups.id,
+            event_id: item.ride_groups.event_id,
+            departure_time: item.ride_groups.departure_time,
+            travel_mode: item.ride_groups.travel_mode,
+            meeting_point: item.ride_groups.meeting_point,
+            driver: driverMember?.profiles ? {
+              name: driverMember.profiles.name,
+              photo: driverMember.profiles.photo
+            } : undefined,
+            events: item.ride_groups.events
+          };
+        }) || [];
 
       setRides(formattedRides);
     } catch (error: any) {
