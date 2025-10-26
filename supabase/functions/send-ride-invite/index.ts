@@ -8,7 +8,8 @@ const corsHeaders = {
 
 interface InviteRequest {
   rideId: string;
-  recipientEmail: string;
+  recipientEmail?: string;
+  linkOnly?: boolean;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -34,10 +35,44 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Unauthorized');
     }
 
-    const { rideId, recipientEmail }: InviteRequest = await req.json();
+    const { rideId, recipientEmail, linkOnly }: InviteRequest = await req.json();
+    
+    console.log('Processing ride invite for:', { rideId, recipientEmail, linkOnly });
 
-    console.log('Processing ride invite:', { rideId, recipientEmail });
+    // If link-only mode, skip email validation and just generate token
+    if (linkOnly || !recipientEmail) {
+      const inviteToken = crypto.randomUUID();
+      
+      const { error: insertError } = await supabase
+        .from('ride_invites')
+        .insert({
+          ride_id: rideId,
+          invite_token: inviteToken,
+          created_by: user.id,
+          expires_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+        });
 
+      if (insertError) {
+        console.error('Error inserting invite token:', insertError);
+        throw insertError;
+      }
+
+      const registrationLink = `${Deno.env.get('SUPABASE_URL')!.replace('.supabase.co', '.lovable.app')}/auth?invite=${inviteToken}`;
+      
+      console.log('Generated shareable invite link:', registrationLink);
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          inviteLink: registrationLink,
+          message: 'Shareable invite link generated',
+          expiresIn: '3 days'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(recipientEmail)) {
       throw new Error('Invalid email format');
