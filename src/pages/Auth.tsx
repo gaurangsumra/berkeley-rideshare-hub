@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Check, MapPin, Wallet } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import campanileImage from "@/assets/campanile-bay.jpg";
-import berkeleyLogo from "@/assets/berkeley-rides-logo.png";
+
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -526,15 +526,6 @@ const Auth = () => {
           </CardContent>
         </Card>
         
-        <div className="mt-8 flex flex-col items-center gap-2">
-          <img 
-            src={berkeleyLogo} 
-            alt="Berkeley Rides" 
-            className="w-80 h-auto drop-shadow-lg"
-            loading="eager"
-          />
-          <h2 className="text-white text-xl font-bold">Berkeley Rides</h2>
-        </div>
       </div>
 
       {/* Forgot Password Dialog */}
