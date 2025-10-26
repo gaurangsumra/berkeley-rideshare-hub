@@ -179,7 +179,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: R
     
     try {
       setLoading(true);
-      const role = isCarpool ? 'passenger' : null;
+      const role = isCarpool ? 'rider' : null;
       
       const { error } = await supabase.from('ride_members').insert({
         ride_id: rideGroup.id,
@@ -189,8 +189,8 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: R
       });
 
       if (error) throw error;
-      const message = role === 'passenger' 
-        ? `Joined as passenger in ${driver?.name}'s ride!` 
+      const message = role === 'rider' 
+        ? `Joined as rider in ${driver?.name}'s ride!` 
         : "Joined ride group!";
       toast.success(message);
       onUpdate();
@@ -225,6 +225,16 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: R
   const handleDeleteRide = async () => {
     try {
       setLoading(true);
+      
+      // First, explicitly delete all members to ensure clean state
+      const { error: memberError } = await supabase
+        .from('ride_members')
+        .delete()
+        .eq('ride_id', rideGroup.id);
+      
+      if (memberError) throw memberError;
+      
+      // Then delete the ride group
       const { error } = await supabase
         .from('ride_groups')
         .delete()
