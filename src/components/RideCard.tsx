@@ -30,6 +30,11 @@ export const RideCard = ({ ride }: RideCardProps) => {
   const navigate = useNavigate();
   const isCarpool = ride.travel_mode === 'Carpool (Student Driver)';
 
+  // Safety check - shouldn't happen with proper filtering but good to be defensive
+  if (!ride.events) {
+    return null;
+  }
+
   return (
     <Card 
       className="cursor-pointer hover:border-accent transition-colors"

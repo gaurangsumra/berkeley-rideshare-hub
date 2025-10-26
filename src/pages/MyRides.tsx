@@ -94,7 +94,7 @@ const MyRides = () => {
       if (error) throw error;
 
       const formattedRides = data
-        ?.filter(item => item.ride_groups)
+        ?.filter(item => item.ride_groups && item.ride_groups.events)
         .map(item => {
           const driverMember = item.ride_groups.ride_members?.find(m => m.role === 'driver');
           return {
@@ -107,7 +107,7 @@ const MyRides = () => {
               name: driverMember.profiles.name,
               photo: driverMember.profiles.photo
             } : undefined,
-            events: item.ride_groups.events
+            events: item.ride_groups.events!
           };
         }) || [];
 
