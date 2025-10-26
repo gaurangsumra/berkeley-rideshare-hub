@@ -16,8 +16,18 @@ const Onboarding = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [inviteDetails, setInviteDetails] = useState<any>(null);
 
   useEffect(() => {
+    // Extract invite token from URL
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('invite');
+    if (token) {
+      setInviteToken(token);
+      validateAndFetchInvite(token);
+    }
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
         navigate("/auth");
@@ -27,6 +37,60 @@ const Onboarding = () => {
       fetchProfile(session.user.id);
     });
   }, [navigate]);
+
+  const validateAndFetchInvite = async (token: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('ride_invites')
+        .select(`
+          ride_id,
+          inviter_name,
+          expires_at,
+          max_uses,
+          use_count,
+          ride_groups!inner (
+            id,
+            event_id,
+            departure_time,
+            capacity,
+            events!inner (
+              name,
+              destination
+            )
+          )
+        `)
+        .eq('invite_token', token)
+        .maybeSingle();
+
+      if (error || !data) {
+        toast.error("Invalid invite link");
+        return;
+      }
+
+      // Check if invite is expired
+      if (new Date(data.expires_at) < new Date()) {
+        toast.error("This invite link has expired");
+        return;
+      }
+
+      // Check if invite has reached max uses
+      if (data.max_uses && data.use_count >= data.max_uses) {
+        toast.error("This invite link has reached its maximum uses");
+        return;
+      }
+
+      // Check if ride has departed
+      if (new Date(data.ride_groups.departure_time) < new Date()) {
+        toast.error("This ride has already departed");
+        return;
+      }
+
+      setInviteDetails(data);
+    } catch (error) {
+      console.error('Error validating invite:', error);
+      toast.error("Failed to validate invite");
+    }
+  };
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -136,6 +200,80 @@ const Onboarding = () => {
     }
     
     try {
+      // Process invite token if present
+      if (inviteToken && inviteDetails) {
+        // Check if user is already a member
+        const { data: existingMember } = await supabase
+          .from('ride_members')
+          .select('id')
+          .eq('ride_id', inviteDetails.ride_id)
+          .eq('user_id', profile.id)
+          .maybeSingle();
+
+        if (existingMember) {
+          toast.info("You're already a member of this ride");
+        } else {
+          // Check current ride capacity
+          const { data: currentMembers } = await supabase
+            .from('ride_members')
+            .select('id')
+            .eq('ride_id', inviteDetails.ride_id);
+
+          const memberCount = currentMembers?.length || 0;
+          const capacity = inviteDetails.ride_groups.capacity;
+
+          if (capacity && memberCount >= capacity) {
+            toast.error("This ride is at full capacity");
+            navigate('/my-rides');
+            return;
+          }
+
+          // Add user to ride
+          const { error: joinError } = await supabase
+            .from('ride_members')
+            .insert({
+              ride_id: inviteDetails.ride_id,
+              user_id: profile.id,
+              status: 'joined',
+              role: null,
+              willing_to_pay: false
+            });
+
+          if (joinError) {
+            console.error('Join error:', joinError);
+            toast.error("Failed to join ride");
+          } else {
+            // Grant event access (ignore duplicate errors)
+            const { error: accessError } = await supabase
+              .from('event_access')
+              .insert({
+                user_id: profile.id,
+                event_id: inviteDetails.ride_groups.event_id,
+                granted_via_ride_id: inviteDetails.ride_id
+              });
+            // Silently ignore duplicate access grants
+
+            // Update profile with invited_via_ride_id
+            await supabase
+              .from('profiles')
+              .update({ invited_via_ride_id: inviteDetails.ride_id })
+              .eq('id', profile.id);
+
+            // Increment invite use count
+            await supabase
+              .from('ride_invites')
+              .update({ use_count: inviteDetails.use_count + 1 })
+              .eq('invite_token', inviteToken);
+
+            toast.success("Successfully joined the ride!");
+          }
+        }
+
+        // Always navigate to my-rides after processing invite
+        navigate('/my-rides');
+        return;
+      }
+
       // Check if external user
       const isExternalUser = !profile.email?.toLowerCase().endsWith('@berkeley.edu');
       
@@ -187,6 +325,20 @@ const Onboarding = () => {
           <h2 className="text-3xl font-bold text-primary">Welcome!</h2>
           <p className="text-muted-foreground">One last step - add your profile photo</p>
         </div>
+
+        {inviteDetails && (
+          <Card className="mb-4 bg-primary/5 border-primary">
+            <CardContent className="pt-6">
+              <p className="text-sm font-medium mb-1">🎉 You're invited!</p>
+              <p className="text-sm text-muted-foreground">
+                {inviteDetails.inviter_name} invited you to join their ride to{' '}
+                <span className="font-medium text-foreground">
+                  {inviteDetails.ride_groups?.events?.destination}
+                </span>
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
