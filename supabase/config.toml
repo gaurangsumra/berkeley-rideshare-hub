@@ -17,3 +17,9 @@ verify_jwt = true
 
 [functions.send-ride-notification]
 verify_jwt = true
+
+[functions.send-attendance-survey]
+verify_jwt = false
+
+[functions.process-attendance-consensus]
+verify_jwt = false

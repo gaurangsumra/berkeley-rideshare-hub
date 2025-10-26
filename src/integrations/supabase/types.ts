@@ -349,6 +349,133 @@ export type Database = {
           },
         ]
       }
+      ride_attendance_responses: {
+        Row: {
+          attended_user_ids: string[]
+          id: string
+          responded_at: string | null
+          respondent_user_id: string
+          ride_id: string
+          survey_id: string
+        }
+        Insert: {
+          attended_user_ids: string[]
+          id?: string
+          responded_at?: string | null
+          respondent_user_id: string
+          ride_id: string
+          survey_id: string
+        }
+        Update: {
+          attended_user_ids?: string[]
+          id?: string
+          responded_at?: string | null
+          respondent_user_id?: string
+          ride_id?: string
+          survey_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ride_attendance_responses_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "ride_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ride_attendance_responses_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "ride_attendance_surveys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ride_attendance_surveys: {
+        Row: {
+          consensus_processed: boolean
+          created_at: string | null
+          id: string
+          responses_received: number
+          ride_id: string
+          survey_deadline: string
+          survey_sent_at: string | null
+          survey_status: Database["public"]["Enums"]["survey_status"]
+          total_members: number
+          updated_at: string | null
+        }
+        Insert: {
+          consensus_processed?: boolean
+          created_at?: string | null
+          id?: string
+          responses_received?: number
+          ride_id: string
+          survey_deadline: string
+          survey_sent_at?: string | null
+          survey_status?: Database["public"]["Enums"]["survey_status"]
+          total_members: number
+          updated_at?: string | null
+        }
+        Update: {
+          consensus_processed?: boolean
+          created_at?: string | null
+          id?: string
+          responses_received?: number
+          ride_id?: string
+          survey_deadline?: string
+          survey_sent_at?: string | null
+          survey_status?: Database["public"]["Enums"]["survey_status"]
+          total_members?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ride_attendance_surveys_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: true
+            referencedRelation: "ride_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ride_completions: {
+        Row: {
+          completed_at: string | null
+          confirmed_by_consensus: boolean
+          id: string
+          ride_id: string
+          total_voters: number
+          user_id: string
+          vote_count: number
+        }
+        Insert: {
+          completed_at?: string | null
+          confirmed_by_consensus?: boolean
+          id?: string
+          ride_id: string
+          total_voters: number
+          user_id: string
+          vote_count: number
+        }
+        Update: {
+          completed_at?: string | null
+          confirmed_by_consensus?: boolean
+          id?: string
+          ride_id?: string
+          total_voters?: number
+          user_id?: string
+          vote_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ride_completions_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "ride_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ride_group_messages: {
         Row: {
           created_at: string | null
@@ -745,6 +872,7 @@ export type Database = {
         | "group_ready"
         | "meeting_point_tie"
         | "ride_starting_soon"
+      survey_status: "pending" | "in_progress" | "completed" | "expired"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -882,6 +1010,7 @@ export const Constants = {
         "meeting_point_tie",
         "ride_starting_soon",
       ],
+      survey_status: ["pending", "in_progress", "completed", "expired"],
     },
   },
 } as const
