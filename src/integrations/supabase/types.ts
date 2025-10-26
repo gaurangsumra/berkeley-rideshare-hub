@@ -355,6 +355,76 @@ export type Database = {
           },
         ]
       }
+      payment_confirmations: {
+        Row: {
+          confirmed_at: string | null
+          created_at: string | null
+          id: string
+          uber_payment_id: string
+          user_id: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          created_at?: string | null
+          id?: string
+          uber_payment_id: string
+          user_id: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          created_at?: string | null
+          id?: string
+          uber_payment_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_confirmations_uber_payment_id_fkey"
+            columns: ["uber_payment_id"]
+            isOneToOne: false
+            referencedRelation: "uber_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_reminders: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_reminder_sent: string | null
+          payment_confirmed: boolean | null
+          reminder_count: number | null
+          uber_payment_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_reminder_sent?: string | null
+          payment_confirmed?: boolean | null
+          reminder_count?: number | null
+          uber_payment_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_reminder_sent?: string | null
+          payment_confirmed?: boolean | null
+          reminder_count?: number | null
+          uber_payment_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_reminders_uber_payment_id_fkey"
+            columns: ["uber_payment_id"]
+            isOneToOne: false
+            referencedRelation: "uber_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -750,25 +820,31 @@ export type Database = {
       uber_payments: {
         Row: {
           amount: number | null
+          cost_type: string | null
           created_at: string | null
           id: string
           payer_user_id: string
+          payer_venmo_username: string | null
           ride_id: string
           venmo_link: string | null
         }
         Insert: {
           amount?: number | null
+          cost_type?: string | null
           created_at?: string | null
           id?: string
           payer_user_id: string
+          payer_venmo_username?: string | null
           ride_id: string
           venmo_link?: string | null
         }
         Update: {
           amount?: number | null
+          cost_type?: string | null
           created_at?: string | null
           id?: string
           payer_user_id?: string
+          payer_venmo_username?: string | null
           ride_id?: string
           venmo_link?: string | null
         }
@@ -922,6 +998,10 @@ export type Database = {
         | "group_ready"
         | "meeting_point_tie"
         | "ride_starting_soon"
+        | "payment_amount_entered"
+        | "payment_reminder"
+        | "payment_confirmed"
+        | "venmo_required"
       survey_status: "pending" | "in_progress" | "completed" | "expired"
     }
     CompositeTypes: {
@@ -1059,6 +1139,10 @@ export const Constants = {
         "group_ready",
         "meeting_point_tie",
         "ride_starting_soon",
+        "payment_amount_entered",
+        "payment_reminder",
+        "payment_confirmed",
+        "venmo_required",
       ],
       survey_status: ["pending", "in_progress", "completed", "expired"],
     },

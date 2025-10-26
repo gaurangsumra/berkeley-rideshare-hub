@@ -157,12 +157,67 @@ Deno.serve(async (req) => {
 
     console.log(`Survey ${survey_id} marked as completed`);
 
+    // Check if payment has already been entered for this ride
+    const { data: existingPayment } = await supabase
+      .from('uber_payments')
+      .select('*')
+      .eq('ride_id', survey.ride_id)
+      .maybeSingle();
+
+    if (existingPayment && completions.length > 0) {
+      console.log('Payment exists, sending notifications to confirmed attendees');
+      
+      // Get all confirmed attendees (excluding payer)
+      const attendeeIds = completions
+        .map(c => c.user_id)
+        .filter(id => id !== existingPayment.payer_user_id);
+      
+      // Calculate split amount
+      const totalMembers = completions.length;
+      const splitAmount = existingPayment.amount / totalMembers;
+      
+      // Get payer name
+      const { data: payerProfile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', existingPayment.payer_user_id)
+        .single();
+      
+      // Send notifications to all confirmed attendees
+      const notifications = attendeeIds.map(userId => ({
+        user_id: userId,
+        ride_id: survey.ride_id,
+        type: 'payment_amount_entered',
+        title: 'Payment Request',
+        message: `${payerProfile?.name || 'A member'} paid $${existingPayment.amount.toFixed(2)}. Your share is $${splitAmount.toFixed(2)}. Please pay via Venmo.`,
+        metadata: {
+          uber_payment_id: existingPayment.id,
+          amount: existingPayment.amount,
+          split_amount: splitAmount,
+          venmo_username: existingPayment.payer_venmo_username,
+        }
+      }));
+
+      if (notifications.length > 0) {
+        const { error: notifError } = await supabase
+          .from('notifications')
+          .insert(notifications);
+
+        if (notifError) {
+          console.error('Error sending payment notifications:', notifError);
+        } else {
+          console.log(`Sent payment notifications to ${attendeeIds.length} members`);
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true,
         completions_created: completions.length,
         total_responses: totalRespondents,
-        total_members: allMembers.length
+        total_members: allMembers.length,
+        payment_notifications_sent: existingPayment ? completions.length - 1 : 0
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

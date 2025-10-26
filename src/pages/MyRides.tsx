@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Navigation } from "@/components/Navigation";
 import { RideCard } from "@/components/RideCard";
 import { AttendanceSurveyDialog } from "@/components/AttendanceSurveyDialog";
+import { PaymentConfirmationCard } from "@/components/PaymentConfirmationCard";
 import { toast } from "sonner";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, DollarSign } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -40,13 +41,30 @@ interface PendingSurvey {
   };
 }
 
+interface PendingPayment {
+  id: string;
+  amount: number;
+  payer_user_id: string;
+  payer_venmo_username: string | null;
+  cost_type: 'rideshare' | 'gas';
+  ride_id: string;
+  splitAmount: number;
+  rideInfo: {
+    eventName: string;
+    eventDate: string;
+    payerName: string;
+  };
+}
+
 const MyRides = () => {
   const navigate = useNavigate();
   const [rides, setRides] = useState<Ride[]>([]);
   const [pendingSurveys, setPendingSurveys] = useState<PendingSurvey[]>([]);
+  const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [surveyDialogOpen, setSurveyDialogOpen] = useState(false);
   const [selectedSurvey, setSelectedSurvey] = useState<PendingSurvey | null>(null);
+  const [userId, setUserId] = useState<string>("");
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -67,8 +85,10 @@ const MyRides = () => {
         return;
       }
 
+      setUserId(session.user.id);
       fetchMyRides(session.user.id);
       fetchPendingSurveys(session.user.id);
+      fetchPendingPayments(session.user.id);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -77,7 +97,37 @@ const MyRides = () => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Real-time subscriptions
+    const paymentsChannel = supabase
+      .channel('payment-updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'uber_payments'
+      }, () => {
+        supabase.auth.getSession().then(({ data }) => {
+          if (data.session) {
+            fetchPendingPayments(data.session.user.id);
+          }
+        });
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'payment_confirmations'
+      }, () => {
+        supabase.auth.getSession().then(({ data }) => {
+          if (data.session) {
+            fetchPendingPayments(data.session.user.id);
+          }
+        });
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      supabase.removeChannel(paymentsChannel);
+    };
   }, [navigate]);
 
   const fetchMyRides = async (userId: string) => {
@@ -140,6 +190,53 @@ const MyRides = () => {
     }
   };
 
+  const fetchPendingPayments = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('uber_payments')
+        .select(`
+          *,
+          ride_groups!inner(
+            id,
+            events!inner(name, date_time)
+          ),
+          profiles!uber_payments_payer_user_id_fkey(name),
+          ride_members!inner(user_id)
+        `)
+        .eq('ride_members.user_id', userId)
+        .neq('payer_user_id', userId);
+      
+      if (error) throw error;
+      
+      // Filter out payments already confirmed by this user
+      const { data: confirmations } = await supabase
+        .from('payment_confirmations')
+        .select('uber_payment_id')
+        .eq('user_id', userId);
+      
+      const confirmedIds = new Set(confirmations?.map(c => c.uber_payment_id) || []);
+      
+      const pending = data?.filter(p => !confirmedIds.has(p.id)).map(p => ({
+        id: p.id,
+        amount: p.amount,
+        payer_user_id: p.payer_user_id,
+        payer_venmo_username: p.payer_venmo_username,
+        cost_type: p.cost_type as 'rideshare' | 'gas',
+        ride_id: p.ride_id,
+        splitAmount: p.amount / p.ride_members.length,
+        rideInfo: {
+          eventName: p.ride_groups.events.name,
+          eventDate: p.ride_groups.events.date_time,
+          payerName: p.profiles.name,
+        }
+      })) || [];
+      
+      setPendingPayments(pending);
+    } catch (error: any) {
+      console.error('Error fetching pending payments:', error);
+    }
+  };
+
   const fetchPendingSurveys = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -183,6 +280,7 @@ const MyRides = () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
       fetchPendingSurveys(session.user.id);
+      fetchPendingPayments(session.user.id);
     }
   };
 
@@ -193,6 +291,28 @@ const MyRides = () => {
           <h1 className="text-3xl font-bold text-primary">My Rides</h1>
           <p className="text-muted-foreground mt-1">Your upcoming ride groups</p>
         </div>
+
+        {/* Pending Payments Section */}
+        {pendingPayments.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-yellow-600" />
+              Pending Payments ({pendingPayments.length})
+            </h2>
+            <div className="space-y-3">
+              {pendingPayments.map(payment => (
+                <PaymentConfirmationCard
+                  key={payment.id}
+                  payment={payment}
+                  splitAmount={payment.splitAmount}
+                  rideInfo={payment.rideInfo}
+                  currentUserId={userId}
+                  onConfirmed={() => fetchPendingPayments(userId)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Pending Surveys Section */}
         {pendingSurveys.length > 0 && (

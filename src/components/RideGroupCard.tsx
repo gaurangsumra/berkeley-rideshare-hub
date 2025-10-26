@@ -99,33 +99,6 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
     };
   }, [rideGroup.id]);
 
-  // Auto-prompt for Uber payment 1 hour before departure
-  useEffect(() => {
-    if (!isMember || !rideGroup.travel_mode.includes('Rideshare')) return;
-    
-    const checkTime = () => {
-      const departureTime = new Date(rideGroup.departure_time);
-      const currentTime = new Date();
-      const oneHourBefore = new Date(departureTime.getTime() - 60 * 60 * 1000);
-      const fiveMinutesAfter = new Date(oneHourBefore.getTime() + 5 * 60 * 1000);
-      
-      // Check if current time is within 1 hour before window (with 5-min buffer)
-      if (currentTime >= oneHourBefore && currentTime <= fiveMinutesAfter) {
-        const alreadyPrompted = localStorage.getItem(`uber-prompt-${rideGroup.id}`);
-        if (!alreadyPrompted) {
-          setShowPayment(true);
-          localStorage.setItem(`uber-prompt-${rideGroup.id}`, 'true');
-          toast.info("It's almost time for your ride! Let's coordinate payment.");
-        }
-      }
-    };
-    
-    checkTime(); // Check immediately
-    const interval = setInterval(checkTime, 60000); // Check every minute
-    
-    return () => clearInterval(interval);
-  }, [rideGroup.id, rideGroup.departure_time, rideGroup.travel_mode, isMember]);
-
   const fetchMembers = async () => {
     try {
       const memberIds = rideGroup.ride_members.map(m => m.user_id);

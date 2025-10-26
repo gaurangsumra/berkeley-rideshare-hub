@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
 
 interface Notification {
   id: string;
@@ -76,16 +77,38 @@ export const NotificationBell = () => {
 
     fetchNotifications();
 
-    if (notification.ride_id) {
-      const { data: ride } = await supabase
-        .from('ride_groups')
-        .select('event_id')
-        .eq('id', notification.ride_id)
-        .single();
+    // Handle routing based on notification type
+    switch (notification.type) {
+      case 'payment_amount_entered':
+      case 'payment_reminder':
+        // Navigate to My Rides page (pending payments section)
+        navigate('/my-rides');
+        break;
+      
+      case 'payment_confirmed':
+        // Just mark as read, show success toast
+        toast.success('Payment confirmed by a member');
+        break;
+      
+      case 'venmo_required':
+        // Open profile page to add Venmo
+        navigate('/profile');
+        toast.info('Please add your Venmo username to your profile');
+        break;
+      
+      default:
+        // Default: navigate to event detail if ride_id exists
+        if (notification.ride_id) {
+          const { data: ride } = await supabase
+            .from('ride_groups')
+            .select('event_id')
+            .eq('id', notification.ride_id)
+            .single();
 
-      if (ride) {
-        navigate(`/events/${ride.event_id}`);
-      }
+          if (ride) {
+            navigate(`/events/${ride.event_id}`);
+          }
+        }
     }
 
     setOpen(false);

@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Loader2, Users, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { PostRidePaymentDialog } from "./PostRidePaymentDialog";
 
 interface RideMember {
   user_id: string;
@@ -52,6 +53,8 @@ export const AttendanceSurveyDialog = ({
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [respondents, setRespondents] = useState<string[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [rideDetails, setRideDetails] = useState<any>(null);
 
   useEffect(() => {
     if (open && rideId) {
@@ -150,6 +153,40 @@ export const AttendanceSurveyDialog = ({
         });
       }
 
+      // Check if user marked themselves as attended
+      if (selectedUserIds.has(currentUserId)) {
+        // Fetch ride details to determine payer/driver
+        const { data: rideData } = await supabase
+          .from('ride_groups')
+          .select(`
+            travel_mode,
+            events(name),
+            ride_members(user_id, role, willing_to_pay, profiles(id, name, photo, program))
+          `)
+          .eq('id', rideId)
+          .single();
+        
+        if (rideData) {
+          // Determine who should enter payment
+          const payerCandidate = rideData.ride_members.find((m: any) => m.willing_to_pay);
+          const driver = rideData.ride_members.find((m: any) => m.role === 'driver');
+          
+          const shouldEnterPayment = 
+            (payerCandidate?.user_id === currentUserId) || 
+            (driver?.user_id === currentUserId && rideData.travel_mode === 'Carpool (Student Driver)');
+          
+          if (shouldEnterPayment) {
+            // Store ride details and open payment dialog
+            setRideDetails(rideData);
+            setShowPaymentDialog(true);
+            toast.success('Response submitted. Please enter the payment amount.');
+            onOpenChange(false);
+            onSubmitted?.();
+            return;
+          }
+        }
+      }
+
       toast.success('Response submitted successfully');
       onOpenChange(false);
       onSubmitted?.();
@@ -189,6 +226,7 @@ export const AttendanceSurveyDialog = ({
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
@@ -276,5 +314,23 @@ export const AttendanceSurveyDialog = ({
         </div>
       </DialogContent>
     </Dialog>
+
+    {showPaymentDialog && rideDetails && (
+      <PostRidePaymentDialog
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        rideId={rideId}
+        members={rideDetails.ride_members.map((m: any) => ({
+          id: m.user_id,
+          name: m.profiles.name,
+          photo: m.profiles.photo,
+          program: m.profiles.program,
+        }))}
+        currentUserId={currentUserId}
+        travelMode={rideDetails.travel_mode}
+        eventName={rideDetails.events.name}
+      />
+    )}
+    </>
   );
 };
