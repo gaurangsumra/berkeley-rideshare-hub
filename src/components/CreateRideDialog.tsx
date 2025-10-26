@@ -21,6 +21,14 @@ interface CreateRideDialogProps {
   onRideCreated: () => void;
 }
 
+const calculateDefaultTime = (eventDate: string): string => {
+  const eventDateTime = new Date(eventDate);
+  // Subtract 1 hour (3600000 milliseconds)
+  const departureTime = new Date(eventDateTime.getTime() - 60 * 60 * 1000);
+  // Format as HH:MM for input[type="time"]
+  return departureTime.toTimeString().slice(0, 5);
+};
+
 export const CreateRideDialog = ({
   open,
   onOpenChange,
@@ -29,14 +37,6 @@ export const CreateRideDialog = ({
   onRideCreated,
 }: CreateRideDialogProps) => {
   const [loading, setLoading] = useState(false);
-  
-  const calculateDefaultTime = (eventDate: string): string => {
-    const eventDateTime = new Date(eventDate);
-    // Subtract 1 hour (3600000 milliseconds)
-    const departureTime = new Date(eventDateTime.getTime() - 60 * 60 * 1000);
-    // Format as HH:MM for input[type="time"]
-    return departureTime.toTimeString().slice(0, 5);
-  };
 
   const [formData, setFormData] = useState({
     date: eventDate ? new Date(eventDate).toISOString().split('T')[0] : "",
@@ -53,7 +53,7 @@ export const CreateRideDialog = ({
         travelMode: "Rideshare (Uber/Lyft)",
       });
     }
-  }, [open, eventDate, calculateDefaultTime]);
+  }, [open, eventDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
