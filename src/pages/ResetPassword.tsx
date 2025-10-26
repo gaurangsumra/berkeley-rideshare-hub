@@ -150,7 +150,7 @@ const ResetPassword = () => {
           <img 
             src={berkeleyLogo} 
             alt="Berkeley Rides" 
-            className="w-20 h-auto drop-shadow-lg"
+            className="w-80 h-auto drop-shadow-lg"
             loading="eager"
           />
           <h2 className="text-white text-xl font-bold">Berkeley Rides</h2>

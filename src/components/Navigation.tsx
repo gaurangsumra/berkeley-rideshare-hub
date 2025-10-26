@@ -16,7 +16,7 @@ export const Navigation = () => {
     <nav className="fixed bottom-0 left-0 right-0 bg-primary text-primary-foreground border-t border-primary/20">
       <div className="container mx-auto max-w-4xl">
         <div className="flex items-center justify-center gap-2 px-4 py-2 border-b border-primary/20">
-          <img src={berkeleyLogo} alt="Berkeley Rides" className="h-8 w-auto" />
+          <img src={berkeleyLogo} alt="Berkeley Rides" className="h-32 w-auto" />
           <span className="text-lg font-bold">Berkeley Rides</span>
         </div>
         <div className="flex items-center justify-around py-3">

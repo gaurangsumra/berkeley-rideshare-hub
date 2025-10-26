@@ -236,7 +236,7 @@ const Onboarding = () => {
             <img 
               src={berkeleyLogo} 
               alt="Berkeley Rides" 
-              className="w-24 h-auto"
+              className="w-96 h-auto"
               loading="eager"
             />
             <h1 className="text-2xl font-bold">Berkeley Rides</h1>
