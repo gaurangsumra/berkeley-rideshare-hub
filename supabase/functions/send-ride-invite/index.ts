@@ -52,6 +52,15 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log('Processing ride invite for:', { rideId, recipientEmail, linkOnly });
 
+    // Fetch inviter's name for all invite types
+    const { data: inviterProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('name')
+      .eq('id', user.id)
+      .single();
+
+    const inviterName = inviterProfile?.name || 'A Berkeley student';
+
     // If link-only mode, skip email validation and just generate token
     if (linkOnly || !recipientEmail) {
       const inviteToken = crypto.randomUUID();
@@ -62,6 +71,7 @@ const handler = async (req: Request): Promise<Response> => {
           ride_id: rideId,
           invite_token: inviteToken,
           created_by: user.id,
+          inviter_name: inviterName,
           expires_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
         });
 
@@ -129,14 +139,6 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
     }
-
-    const { data: inviterProfile } = await supabaseAdmin
-      .from('profiles')
-      .select('name')
-      .eq('id', user.id)
-      .single();
-
-    const inviterName = inviterProfile?.name || 'A Berkeley student';
 
     const { data: rideDetails } = await supabaseAdmin
       .from('ride_groups')

@@ -315,7 +315,7 @@ const Auth = () => {
             <CardContent className="pt-6">
               <p className="text-sm font-medium mb-2">🎉 You're invited!</p>
               <p className="text-sm text-muted-foreground">
-                <strong>{inviteDetails.inviter_name}</strong> invited you to join their ride to{' '}
+                <strong>{inviteDetails.inviter_name || 'A Berkeley student'}</strong> invited you to join their ride to{' '}
                 <strong>{inviteDetails.ride_groups?.events?.name}</strong>
               </p>
             </CardContent>

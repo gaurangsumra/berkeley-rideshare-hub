@@ -40,55 +40,60 @@ const Onboarding = () => {
 
   const validateAndFetchInvite = async (token: string) => {
     try {
-      const { data, error } = await supabase
+      // First, fetch just the invite record (no nested joins to avoid RLS issues)
+      const { data: invite, error: inviteError } = await supabase
         .from('ride_invites')
-        .select(`
-          ride_id,
-          inviter_name,
-          expires_at,
-          max_uses,
-          use_count,
-          ride_groups!inner (
-            id,
-            event_id,
-            departure_time,
-            capacity,
-            events!inner (
-              name,
-              destination
-            )
-          )
-        `)
+        .select('ride_id, expires_at, max_uses, use_count, inviter_name')
         .eq('invite_token', token)
-        .maybeSingle();
+        .single();
 
-      if (error || !data) {
+      if (inviteError || !invite) {
+        console.error('Invite not found:', inviteError);
         toast.error("Invalid invite link");
+        navigate('/auth');
         return;
       }
 
       // Check if invite is expired
-      if (new Date(data.expires_at) < new Date()) {
+      if (new Date(invite.expires_at) < new Date()) {
         toast.error("This invite link has expired");
+        navigate('/auth');
         return;
       }
 
       // Check if invite has reached max uses
-      if (data.max_uses && data.use_count >= data.max_uses) {
-        toast.error("This invite link has reached its maximum uses");
+      if (invite.max_uses && invite.use_count >= invite.max_uses) {
+        toast.error("This invite link has been fully used");
+        navigate('/auth');
         return;
       }
 
-      // Check if ride has departed
-      if (new Date(data.ride_groups.departure_time) < new Date()) {
+      // Separately fetch ride and event details (public data)
+      const { data: rideGroup } = await supabase
+        .from('ride_groups')
+        .select('departure_time, event_id, capacity, events(name, destination)')
+        .eq('id', invite.ride_id)
+        .single();
+
+      // Check if ride has already departed
+      if (rideGroup && new Date(rideGroup.departure_time) < new Date()) {
         toast.error("This ride has already departed");
+        navigate('/auth');
         return;
       }
 
-      setInviteDetails(data);
+      // Combine the data for display
+      const inviteWithDetails = {
+        ...invite,
+        ride_groups: rideGroup
+      };
+
+      setInviteDetails(inviteWithDetails);
+      console.log('Invite validated successfully:', inviteWithDetails);
     } catch (error) {
       console.error('Error validating invite:', error);
-      toast.error("Failed to validate invite");
+      toast.error("Failed to validate invite link");
+      navigate('/auth');
     }
   };
 
@@ -331,7 +336,7 @@ const Onboarding = () => {
             <CardContent className="pt-6">
               <p className="text-sm font-medium mb-1">🎉 You're invited!</p>
               <p className="text-sm text-muted-foreground">
-                {inviteDetails.inviter_name} invited you to join their ride to{' '}
+                {inviteDetails.inviter_name || 'A Berkeley student'} invited you to join their ride to{' '}
                 <span className="font-medium text-foreground">
                   {inviteDetails.ride_groups?.events?.destination}
                 </span>
