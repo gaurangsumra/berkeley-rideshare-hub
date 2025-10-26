@@ -32,7 +32,7 @@ const Auth = () => {
       // 1. Check if onboarding is complete (has photo)
       const { data: profile } = await supabase
         .from('profiles')
-        .select('photo, is_invited_user, invited_via_ride_id')
+        .select('photo, email')
         .eq('id', userId)
         .single();
       
@@ -40,30 +40,31 @@ const Auth = () => {
         return '/onboarding';
       }
       
-      // 2. Check for upcoming rides
-      const { data: upcomingRides } = await supabase
-        .from('ride_members')
-        .select(`
-          ride_id,
-          ride_groups!inner(
-            id,
-            departure_time
-          )
-        `)
-        .eq('user_id', userId)
-        .gte('ride_groups.departure_time', new Date().toISOString())
-        .order('ride_groups(departure_time)', { ascending: true });
+      const isBerkeleyUser = profile.email?.endsWith('@berkeley.edu');
       
-      // 3. If has upcoming rides, go to My Rides
-      if (upcomingRides && upcomingRides.length > 0) {
+      if (isBerkeleyUser) {
+        // Berkeley users: check for upcoming rides, else go to events
+        const { data: upcomingRides } = await supabase
+          .from('ride_members')
+          .select(`
+            ride_id,
+            ride_groups!inner(
+              id,
+              departure_time
+            )
+          `)
+          .eq('user_id', userId)
+          .gte('ride_groups.departure_time', new Date().toISOString())
+          .limit(1);
+        
+        return upcomingRides?.length ? '/my-rides' : '/events';
+      } else {
+        // External users: always go to My Rides
         return '/my-rides';
       }
-      
-      // 4. Otherwise, go to Events
-      return '/events';
     } catch (error) {
       console.error('Error determining route:', error);
-      return '/events'; // Default fallback
+      return '/my-rides'; // Safe fallback
     }
   };
 
@@ -145,61 +146,30 @@ const Auth = () => {
     }
   };
 
-  const validateBerkeleyEmail = async (email: string): Promise<boolean> => {
-    // Always allow Berkeley emails
-    if (email.toLowerCase().endsWith('@berkeley.edu')) {
-      return true;
-    }
-    
-    // Non-Berkeley email - check for valid invite token
-    if (!inviteToken) {
-      return false; // No invite, reject
-    }
-    
-    // Validate the invite token exists and is active
-    const { data: inviteData, error } = await supabase
-      .from('ride_invites')
-      .select('expires_at, max_uses, use_count')
-      .eq('invite_token', inviteToken)
-      .single();
-    
-    if (error || !inviteData) {
-      return false; // Invalid token
-    }
-    
-    // Check expiration
-    if (new Date(inviteData.expires_at) < new Date()) {
-      return false; // Expired
-    }
-    
-    // Check max uses
-    if (inviteData.max_uses && inviteData.use_count >= inviteData.max_uses) {
-      return false; // Limit reached
-    }
-    
-    return true; // Valid invite token
-  };
-
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!(await validateBerkeleyEmail(email))) {
-      toast.error("Please use your @berkeley.edu email address");
-      return;
-    }
-
     if (!name) {
       toast.error("Please enter your name");
       return;
     }
     
-    if (!inviteToken && !program) {
+    const isBerkeleyEmail = email.toLowerCase().endsWith('@berkeley.edu');
+    
+    if (!isBerkeleyEmail && !inviteToken) {
+      toast.error("You need a @berkeley.edu email or an invite link to sign up");
+      return;
+    }
+    
+    if (isBerkeleyEmail && !program) {
       toast.error("Please enter your program");
       return;
     }
 
     try {
       setLoading(true);
+      const isBerkeleyEmail = email.toLowerCase().endsWith('@berkeley.edu');
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -208,7 +178,7 @@ const Auth = () => {
           data: {
             name,
             program: program || 'Not specified',
-            is_invited_user: !!inviteToken,
+            is_invited_user: !isBerkeleyEmail,
             invited_via_ride_id: inviteRideId
           }
         }
@@ -247,11 +217,6 @@ const Auth = () => {
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!(await validateBerkeleyEmail(email))) {
-      toast.error("Please use your @berkeley.edu email address");
-      return;
-    }
 
     try {
       setLoading(true);
@@ -285,11 +250,6 @@ const Auth = () => {
   const handleForgotPassword = async () => {
     if (!resetEmail) {
       toast.error("Please enter your email address");
-      return;
-    }
-
-    if (!(await validateBerkeleyEmail(resetEmail))) {
-      toast.error("Only Berkeley students or invited users can reset passwords");
       return;
     }
 

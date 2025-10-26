@@ -1,16 +1,23 @@
 import { Link, useLocation } from "react-router-dom";
 import { Calendar, Car, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUserAuthorization } from "@/hooks/useUserAuthorization";
 
 
 export const Navigation = () => {
   const location = useLocation();
+  const { isBerkeleyUser } = useUserAuthorization();
 
-  const links = [
-    { href: "/events", icon: Calendar, label: "Events" },
-    { href: "/my-rides", icon: Car, label: "My Rides" },
-    { href: "/profile", icon: User, label: "Profile" },
-  ];
+  const links = isBerkeleyUser
+    ? [
+        { href: "/events", icon: Calendar, label: "Events" },
+        { href: "/my-rides", icon: Car, label: "My Rides" },
+        { href: "/profile", icon: User, label: "Profile" },
+      ]
+    : [
+        { href: "/my-rides", icon: Car, label: "My Rides" },
+        { href: "/profile", icon: User, label: "Profile" },
+      ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-primary text-primary-foreground border-t border-primary/20">

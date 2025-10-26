@@ -10,6 +10,7 @@ import { EventCard } from "@/components/EventCard";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { ImportCalendarDialog } from "@/components/ImportCalendarDialog";
 import { debounce } from "@/lib/utils";
+import { useUserAuthorization } from "@/hooks/useUserAuthorization";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +41,17 @@ const Events = () => {
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState<Date | undefined>();
+  const { isExternalUser, isLoading: authLoading } = useUserAuthorization();
+
+  // Redirect external users
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (isExternalUser) {
+      toast.error("You don't have access to browse events. You can only see rides you've been invited to.");
+      navigate('/my-rides');
+    }
+  }, [isExternalUser, authLoading, navigate]);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
