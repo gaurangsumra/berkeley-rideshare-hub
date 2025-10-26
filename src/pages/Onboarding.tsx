@@ -43,7 +43,7 @@ const Onboarding = () => {
       // First, fetch just the invite record (no nested joins to avoid RLS issues)
       const { data: invite, error: inviteError } = await supabase
         .from('ride_invites')
-        .select('ride_id, expires_at, max_uses, use_count, inviter_name')
+        .select('ride_id, expires_at, max_uses, use_count, inviter_name, invited_email')
         .eq('invite_token', token)
         .single();
 
@@ -97,6 +97,114 @@ const Onboarding = () => {
     }
   };
 
+  const processInviteJoin = async () => {
+    if (!inviteToken || !inviteDetails || !profile) {
+      return false;
+    }
+
+    try {
+      console.log('Processing invite join for ride:', inviteDetails.ride_id);
+
+      // Step 1: Verify email match if invited_email is set
+      if (inviteDetails.invited_email) {
+        const normalizedInviteEmail = inviteDetails.invited_email.toLowerCase().trim();
+        const normalizedProfileEmail = profile.email?.toLowerCase().trim();
+        
+        if (normalizedInviteEmail !== normalizedProfileEmail) {
+          toast.error(`This invite is for ${inviteDetails.invited_email}. Please sign in with that email.`);
+          return false;
+        }
+      }
+
+      // Step 2: Update profile FIRST (critical for RLS)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
+          is_invited_user: true,
+          invited_via_ride_id: inviteDetails.ride_id 
+        })
+        .eq('id', profile.id);
+
+      if (profileError) {
+        console.error('Failed to update profile:', profileError);
+        toast.error("Failed to process invite");
+        return false;
+      }
+
+      console.log('Profile updated with invite info');
+
+      // Step 3: Check if user is already a member
+      const { data: existingMember } = await supabase
+        .from('ride_members')
+        .select('id')
+        .eq('ride_id', inviteDetails.ride_id)
+        .eq('user_id', profile.id)
+        .maybeSingle();
+
+      if (existingMember) {
+        toast.info("You're already a member of this ride");
+        return true;
+      }
+
+      // Step 4: Check capacity
+      const { data: currentMembers } = await supabase
+        .from('ride_members')
+        .select('id')
+        .eq('ride_id', inviteDetails.ride_id);
+
+      const memberCount = currentMembers?.length || 0;
+      const capacity = inviteDetails.ride_groups?.capacity;
+
+      if (capacity && memberCount >= capacity) {
+        toast.error("This ride is at full capacity");
+        return false;
+      }
+
+      // Step 5: Insert into ride_members (now passes RLS)
+      const { error: joinError } = await supabase
+        .from('ride_members')
+        .insert({
+          ride_id: inviteDetails.ride_id,
+          user_id: profile.id,
+          status: 'joined',
+          role: null,
+          willing_to_pay: false
+        });
+
+      if (joinError) {
+        console.error('Join error:', joinError);
+        toast.error("Failed to join ride");
+        return false;
+      }
+
+      console.log('Successfully joined ride');
+
+      // Step 6: Grant event access
+      if (inviteDetails.ride_groups?.event_id) {
+        await supabase
+          .from('event_access')
+          .insert({
+            user_id: profile.id,
+            event_id: inviteDetails.ride_groups.event_id,
+            granted_via_ride_id: inviteDetails.ride_id
+          });
+      }
+
+      // Step 7: Increment invite use count
+      await supabase
+        .from('ride_invites')
+        .update({ use_count: inviteDetails.use_count + 1 })
+        .eq('invite_token', inviteToken);
+
+      toast.success("Successfully joined the ride!");
+      return true;
+    } catch (error) {
+      console.error('Error processing invite:', error);
+      toast.error("Failed to process invite");
+      return false;
+    }
+  };
+
   const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -122,8 +230,18 @@ const Onboarding = () => {
         setProfile({ ...data, is_invited_user: isExternal });
       }
 
-      // If user already has a photo, onboarding is complete - redirect appropriately
+      // If user already has a photo, onboarding is complete
       if (data.photo) {
+        // If there's an invite token, process it immediately
+        if (inviteToken && inviteDetails) {
+          const joined = await processInviteJoin();
+          if (joined) {
+            navigate("/my-rides");
+            return;
+          }
+        }
+        
+        // Otherwise redirect appropriately
         if (isExternal) {
           navigate("/my-rides");
         } else {
@@ -207,74 +325,7 @@ const Onboarding = () => {
     try {
       // Process invite token if present
       if (inviteToken && inviteDetails) {
-        // Check if user is already a member
-        const { data: existingMember } = await supabase
-          .from('ride_members')
-          .select('id')
-          .eq('ride_id', inviteDetails.ride_id)
-          .eq('user_id', profile.id)
-          .maybeSingle();
-
-        if (existingMember) {
-          toast.info("You're already a member of this ride");
-        } else {
-          // Check current ride capacity
-          const { data: currentMembers } = await supabase
-            .from('ride_members')
-            .select('id')
-            .eq('ride_id', inviteDetails.ride_id);
-
-          const memberCount = currentMembers?.length || 0;
-          const capacity = inviteDetails.ride_groups.capacity;
-
-          if (capacity && memberCount >= capacity) {
-            toast.error("This ride is at full capacity");
-            navigate('/my-rides');
-            return;
-          }
-
-          // Add user to ride
-          const { error: joinError } = await supabase
-            .from('ride_members')
-            .insert({
-              ride_id: inviteDetails.ride_id,
-              user_id: profile.id,
-              status: 'joined',
-              role: null,
-              willing_to_pay: false
-            });
-
-          if (joinError) {
-            console.error('Join error:', joinError);
-            toast.error("Failed to join ride");
-          } else {
-            // Grant event access (ignore duplicate errors)
-            const { error: accessError } = await supabase
-              .from('event_access')
-              .insert({
-                user_id: profile.id,
-                event_id: inviteDetails.ride_groups.event_id,
-                granted_via_ride_id: inviteDetails.ride_id
-              });
-            // Silently ignore duplicate access grants
-
-            // Update profile with invited_via_ride_id
-            await supabase
-              .from('profiles')
-              .update({ invited_via_ride_id: inviteDetails.ride_id })
-              .eq('id', profile.id);
-
-            // Increment invite use count
-            await supabase
-              .from('ride_invites')
-              .update({ use_count: inviteDetails.use_count + 1 })
-              .eq('invite_token', inviteToken);
-
-            toast.success("Successfully joined the ride!");
-          }
-        }
-
-        // Always navigate to my-rides after processing invite
+        const joined = await processInviteJoin();
         navigate('/my-rides');
         return;
       }

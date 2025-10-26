@@ -98,29 +98,15 @@ const Auth = () => {
 
   const validateInviteToken = async (token: string) => {
     try {
+      // Step 1: Fetch just the invite record (no nested joins to avoid RLS issues)
       const { data: inviteData, error } = await supabase
         .from('ride_invites')
-        .select(`
-          ride_id, 
-          expires_at, 
-          max_uses, 
-          use_count,
-          invited_email,
-          inviter_name,
-          ride_groups (
-            id,
-            travel_mode,
-            events (
-              name,
-              destination,
-              city
-            )
-          )
-        `)
+        .select('ride_id, expires_at, max_uses, use_count, invited_email, inviter_name')
         .eq('invite_token', token)
         .single();
 
       if (error || !inviteData) {
+        console.error('Invite validation error:', error);
         toast.error("Invalid invite link");
         return;
       }
@@ -135,13 +121,44 @@ const Auth = () => {
         return;
       }
 
+      // Step 2: Optionally fetch ride_groups separately for display (light info only)
+      const { data: rideGroup } = await supabase
+        .from('ride_groups')
+        .select('id, travel_mode')
+        .eq('id', inviteData.ride_id)
+        .single();
+
+      // Step 3: Try to fetch event info, but don't fail if unavailable
+      let eventInfo = null;
+      if (rideGroup) {
+        const { data: rideWithEvent } = await supabase
+          .from('ride_groups')
+          .select('events(name, destination, city)')
+          .eq('id', inviteData.ride_id)
+          .single();
+        
+        eventInfo = rideWithEvent?.events;
+      }
+
+      // Combine the data for display
+      const combinedInviteData = {
+        ...inviteData,
+        ride_groups: rideGroup ? {
+          ...rideGroup,
+          events: eventInfo
+        } : null
+      };
+
       setInviteRideId(inviteData.ride_id);
-      setInviteDetails(inviteData);
+      setInviteDetails(combinedInviteData);
+      
       if (inviteData.invited_email) {
         setEmail(inviteData.invited_email);
       }
-      toast.success("You've been invited to join a ride! Please create your account to continue.");
+      
+      toast.success("You've been invited to join a ride! Please sign in to continue.");
     } catch (error: any) {
+      console.error('Failed to validate invite:', error);
       toast.error("Failed to validate invite link");
     }
   };
@@ -315,8 +332,10 @@ const Auth = () => {
             <CardContent className="pt-6">
               <p className="text-sm font-medium mb-2">🎉 You're invited!</p>
               <p className="text-sm text-muted-foreground">
-                <strong>{inviteDetails.inviter_name || 'A Berkeley student'}</strong> invited you to join their ride to{' '}
-                <strong>{inviteDetails.ride_groups?.events?.name}</strong>
+                <strong>{inviteDetails.inviter_name || 'A Berkeley student'}</strong> invited you to join their ride
+                {inviteDetails.ride_groups?.events?.destination && (
+                  <> to <strong>{inviteDetails.ride_groups.events.destination}</strong></>
+                )}
               </p>
             </CardContent>
           </Card>
