@@ -23,6 +23,8 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     
     const authHeader = req.headers.get('authorization');
+    console.log('Auth header present:', !!authHeader, 'prefix:', authHeader?.slice(0, 20));
+    
     if (!authHeader) {
       throw new Error('Missing authorization header');
     }
@@ -34,6 +36,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Validate user authentication
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
+    console.log('getUser error:', userError?.message, 'user found:', !!user);
+    
     if (userError || !user) {
       throw new Error('Unauthorized');
     }

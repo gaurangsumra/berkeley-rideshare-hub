@@ -43,17 +43,26 @@ export const InviteDialog = ({ open, onOpenChange, rideId }: InviteDialogProps) 
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('send-ride-invite', {
+      const url = `https://rizftvjircbgfsamrvdf.supabase.co/functions/v1/send-ride-invite`;
+      const res = await fetch(url, {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${session.access_token}`
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: { 
+        body: JSON.stringify({ 
           rideId, 
           recipientEmail: email 
-        }
+        }),
       });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || `Request failed with status ${res.status}`);
+      }
+
+      const data = await res.json();
 
       if (data?.existingUser) {
         toast.success("User already exists - they've been granted access to this ride!");
@@ -84,17 +93,26 @@ export const InviteDialog = ({ open, onOpenChange, rideId }: InviteDialogProps) 
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('send-ride-invite', {
+      const url = `https://rizftvjircbgfsamrvdf.supabase.co/functions/v1/send-ride-invite`;
+      const res = await fetch(url, {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${session.access_token}`
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: { 
+        body: JSON.stringify({ 
           rideId,
           linkOnly: true
-        }
+        }),
       });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || `Request failed with status ${res.status}`);
+      }
+
+      const data = await res.json();
 
       setInviteLink(data.inviteLink);
       toast.success("Invite link generated! Share it with anyone.");
