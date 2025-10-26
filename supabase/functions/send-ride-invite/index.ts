@@ -19,21 +19,27 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
       throw new Error('Missing authorization header');
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey, {
+    // Create user-scoped client for auth validation
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { authorization: authHeader } },
     });
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Validate user authentication
+    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
       throw new Error('Unauthorized');
     }
+
+    // Create admin client for privileged operations
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     const { rideId, recipientEmail, linkOnly }: InviteRequest = await req.json();
     
@@ -43,7 +49,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (linkOnly || !recipientEmail) {
       const inviteToken = crypto.randomUUID();
       
-      const { error: insertError } = await supabase
+      const { error: insertError } = await supabaseAdmin
         .from('ride_invites')
         .insert({
           ride_id: rideId,
@@ -78,21 +84,21 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Invalid email format');
     }
 
-    const { data: existingProfile } = await supabase
+    const { data: existingProfile } = await supabaseAdmin
       .from('profiles')
       .select('id, is_invited_user, name')
       .eq('email', recipientEmail)
       .single();
 
     if (existingProfile) {
-      const { data: rideData } = await supabase
+      const { data: rideData } = await supabaseAdmin
         .from('ride_groups')
         .select('event_id')
         .eq('id', rideId)
         .single();
 
       if (rideData) {
-        await supabase
+        await supabaseAdmin
           .from('event_access')
           .insert({
             user_id: existingProfile.id,
@@ -113,7 +119,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    const { data: inviterProfile } = await supabase
+    const { data: inviterProfile } = await supabaseAdmin
       .from('profiles')
       .select('name')
       .eq('id', user.id)
@@ -121,7 +127,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const inviterName = inviterProfile?.name || 'A Berkeley student';
 
-    const { data: rideDetails } = await supabase
+    const { data: rideDetails } = await supabaseAdmin
       .from('ride_groups')
       .select(`
         id,
@@ -146,7 +152,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const inviteToken = crypto.randomUUID();
 
-    const { error: insertError } = await supabase
+    const { error: insertError } = await supabaseAdmin
       .from('ride_invites')
       .insert({
         ride_id: rideId,
@@ -259,7 +265,7 @@ Keep it concise and friendly.`;
     `;
 
     // Use Supabase Auth admin to send the email
-    const { error: emailError } = await supabase.auth.admin.inviteUserByEmail(recipientEmail, {
+    const { error: emailError } = await supabaseAdmin.auth.admin.inviteUserByEmail(recipientEmail, {
       data: {
         invite_token: inviteToken,
         ride_id: rideId,
@@ -272,7 +278,7 @@ Keep it concise and friendly.`;
       console.error('Email sending failed:', emailError);
       
       // Fallback: Create a magic link instead
-      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
         email: recipientEmail,
         options: {
