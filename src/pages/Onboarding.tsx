@@ -232,13 +232,16 @@ const Onboarding = () => {
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-4">
-          <img 
-            src={berkeleyLogo} 
-            alt="Berkeley Rides" 
-            className="w-[100px] h-auto mx-auto"
-            loading="eager"
-          />
-          <h1 className="text-4xl font-bold text-primary">Welcome to Berkeley Rides</h1>
+          <div className="flex flex-col items-center gap-2 mb-2">
+            <img 
+              src={berkeleyLogo} 
+              alt="Berkeley Rides" 
+              className="w-24 h-auto"
+              loading="eager"
+            />
+            <h1 className="text-2xl font-bold">Berkeley Rides</h1>
+          </div>
+          <h2 className="text-3xl font-bold text-primary">Welcome!</h2>
           <p className="text-muted-foreground">One last step - add your profile photo</p>
         </div>
 

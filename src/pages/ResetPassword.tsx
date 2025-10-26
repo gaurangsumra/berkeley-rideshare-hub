@@ -146,13 +146,14 @@ const ResetPassword = () => {
           </CardContent>
         </Card>
 
-        <div className="mt-12 text-center">
+        <div className="mt-12 flex flex-col items-center gap-2">
           <img 
             src={berkeleyLogo} 
             alt="Berkeley Rides" 
-            className="w-[140px] h-auto mx-auto drop-shadow-lg"
+            className="w-20 h-auto drop-shadow-lg"
             loading="eager"
           />
+          <h2 className="text-white text-xl font-bold">Berkeley Rides</h2>
         </div>
       </div>
     </div>
