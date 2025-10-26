@@ -530,7 +530,7 @@ const Auth = () => {
           <img 
             src={berkeleyLogo} 
             alt="Berkeley Rides" 
-            className="w-[120px] h-auto mx-auto drop-shadow-lg"
+            className="w-[140px] h-auto mx-auto drop-shadow-lg"
             loading="eager"
           />
         </div>
