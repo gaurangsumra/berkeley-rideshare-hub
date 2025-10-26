@@ -10,6 +10,7 @@ import Events from "./pages/Events";
 import MyRides from "./pages/MyRides";
 import Profile from "./pages/Profile";
 import EventDetail from "./pages/EventDetail";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/events/:eventId" element={<EventDetail />} />
           <Route path="/my-rides" element={<MyRides />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

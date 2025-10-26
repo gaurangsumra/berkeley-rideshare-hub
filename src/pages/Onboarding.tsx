@@ -175,28 +175,48 @@ const Onboarding = () => {
     }
   };
 
-  const handleCompleteSetup = () => {
+  const handleCompleteSetup = async () => {
     if (!photoUrl) {
       toast.error("Please upload a profile photo to continue");
       return;
     }
     
+    // Smart routing: Priority 1 - Check for upcoming rides
+    const { data: upcomingRides } = await supabase
+      .from('ride_members')
+      .select(`
+        ride_id,
+        ride_groups!inner(
+          id,
+          departure_time
+        )
+      `)
+      .eq('user_id', profile.id)
+      .gte('ride_groups.departure_time', new Date().toISOString())
+      .limit(1);
+    
+    // If has upcoming rides, go to My Rides page
+    if (upcomingRides && upcomingRides.length > 0) {
+      navigate('/my-rides');
+      return;
+    }
+    
+    // Priority 2 - Check for invited event (only if no upcoming rides)
     if (profile.is_invited_user && profile.invited_via_ride_id) {
-      supabase
+      const { data } = await supabase
         .from('ride_groups')
         .select('event_id')
         .eq('id', profile.invited_via_ride_id)
-        .single()
-        .then(({ data }) => {
-          if (data?.event_id) {
-            navigate(`/events/${data.event_id}`);
-          } else {
-            navigate("/events");
-          }
-        });
-    } else {
-      navigate("/events");
+        .single();
+      
+      if (data?.event_id) {
+        navigate(`/events/${data.event_id}`);
+        return;
+      }
     }
+    
+    // Priority 3 - Default to Events page
+    navigate("/events");
   };
 
   if (!profile) {

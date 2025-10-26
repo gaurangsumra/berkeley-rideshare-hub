@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Shield, Users, MapPin } from "lucide-react";
+import { Check, MapPin, Wallet } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import campanileImage from "@/assets/campanile-bay.jpg";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -19,6 +21,50 @@ const Auth = () => {
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [inviteRideId, setInviteRideId] = useState<string | null>(null);
   const [inviteDetails, setInviteDetails] = useState<any>(null);
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [sendingReset, setSendingReset] = useState(false);
+
+  // Smart routing helper
+  const determinePostLoginRoute = async (userId: string): Promise<string> => {
+    try {
+      // 1. Check if onboarding is complete (has photo)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('photo, is_invited_user, invited_via_ride_id')
+        .eq('id', userId)
+        .single();
+      
+      if (!profile?.photo) {
+        return '/onboarding';
+      }
+      
+      // 2. Check for upcoming rides
+      const { data: upcomingRides } = await supabase
+        .from('ride_members')
+        .select(`
+          ride_id,
+          ride_groups!inner(
+            id,
+            departure_time
+          )
+        `)
+        .eq('user_id', userId)
+        .gte('ride_groups.departure_time', new Date().toISOString())
+        .order('ride_groups(departure_time)', { ascending: true });
+      
+      // 3. If has upcoming rides, go to My Rides
+      if (upcomingRides && upcomingRides.length > 0) {
+        return '/my-rides';
+      }
+      
+      // 4. Otherwise, go to Events
+      return '/events';
+    } catch (error) {
+      console.error('Error determining route:', error);
+      return '/events'; // Default fallback
+    }
+  };
 
   useEffect(() => {
     // Check for invite token in URL
@@ -31,15 +77,17 @@ const Auth = () => {
       validateInviteToken(token);
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
-        navigate("/onboarding");
+        const route = await determinePostLoginRoute(session.user.id);
+        navigate(route);
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        navigate("/onboarding");
+        const route = await determinePostLoginRoute(session.user.id);
+        navigate(route);
       }
     });
 
@@ -220,12 +268,42 @@ const Auth = () => {
         throw error;
       }
       
-      toast.success("Signed in successfully!");
-      navigate("/onboarding");
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const route = await determinePostLoginRoute(user.id);
+        toast.success("Signed in successfully!");
+        navigate(route);
+      }
     } catch (error: any) {
       // Error already handled above
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!resetEmail) {
+      toast.error("Please enter your email address");
+      return;
+    }
+
+    if (!(await validateBerkeleyEmail(resetEmail))) {
+      toast.error("Only Berkeley students or invited users can reset passwords");
+      return;
+    }
+
+    setSendingReset(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setSendingReset(false);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Password reset link sent to your email");
+      setForgotPasswordOpen(false);
+      setResetEmail("");
     }
   };
 
@@ -258,11 +336,22 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-8">
+    <div 
+      className="min-h-screen flex flex-col items-center justify-center p-4 relative"
+      style={{
+        backgroundImage: `url(${campanileImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {/* Dark overlay for readability */}
+      <div className="absolute inset-0 bg-black/60" />
+      
+      <div className="w-full max-w-md space-y-8 relative z-10">
         <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-primary">Berkeley Rides</h1>
-          <p className="text-muted-foreground">Trusted ride coordination for UC Berkeley students</p>
+          <h1 className="text-5xl font-bold text-white drop-shadow-lg">Berkeley Rides</h1>
+          <p className="text-xl text-white/90 drop-shadow-md">Share rides to off-campus events and destinations</p>
         </div>
 
         {inviteDetails && (
@@ -330,16 +419,23 @@ const Auth = () => {
                       required
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="signin-password">Password *</Label>
-                    <Input
-                      id="signin-password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
+                   <div>
+                     <Label htmlFor="signin-password">Password *</Label>
+                     <Input
+                       id="signin-password"
+                       type="password"
+                       value={password}
+                       onChange={(e) => setPassword(e.target.value)}
+                       required
+                     />
+                     <button
+                       type="button"
+                       onClick={() => setForgotPasswordOpen(true)}
+                       className="text-sm text-primary hover:underline text-left mt-1"
+                     >
+                       Forgot password?
+                     </button>
+                   </div>
                   <Button type="submit" disabled={loading} className="w-full">
                     {loading ? "Signing in..." : "Sign In"}
                   </Button>
@@ -404,33 +500,74 @@ const Auth = () => {
             </Tabs>
 
             <div className="space-y-3 pt-4 border-t">
-              {!inviteToken && (
-                <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-primary mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm">Verified Berkeley Only</p>
-                    <p className="text-xs text-muted-foreground">Only @berkeley.edu emails can access</p>
-                  </div>
-                </div>
-              )}
               <div className="flex items-start gap-3">
-                <Users className="w-5 h-5 text-primary mt-0.5" />
+                <Check className="w-5 h-5 text-primary mt-0.5" />
                 <div>
                   <p className="font-medium text-sm">Trusted Community</p>
-                  <p className="text-xs text-muted-foreground">Connect with verified Cal students</p>
+                  <p className="text-xs text-muted-foreground">Only Berkeley.edu emails or Berkeley-invited people can access the app</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-primary mt-0.5" />
                 <div>
                   <p className="font-medium text-sm">Coordinate Rides</p>
-                  <p className="text-xs text-muted-foreground">Share rides to off-campus events</p>
+                  <p className="text-xs text-muted-foreground">Share rides to off-campus events and popular destinations</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Wallet className="w-5 h-5 text-primary mt-0.5" />
+                <div>
+                  <p className="font-medium text-sm">Affordable Travel</p>
+                  <p className="text-xs text-muted-foreground">Split costs and save money on transportation</p>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
+        
+        {/* Logo placeholder - will be replaced when logo is provided */}
+        <div className="mt-8 text-center">
+          <p className="text-white/60 text-sm">Berkeley Rides Logo Coming Soon</p>
+        </div>
       </div>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              Enter your email address and we'll send you a link to reset your password.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">Email</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                placeholder="your.email@berkeley.edu"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setForgotPasswordOpen(false);
+                setResetEmail("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleForgotPassword} disabled={sendingReset}>
+              {sendingReset ? "Sending..." : "Send Reset Link"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
