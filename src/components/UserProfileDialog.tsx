@@ -13,8 +13,8 @@ interface UserProfileDialogProps {
 
 export const UserProfileDialog = ({ open, onOpenChange, userId }: UserProfileDialogProps) => {
   const [profile, setProfile] = useState<any>(null);
-  const [avgRating, setAvgRating] = useState<number | null>(null);
-  const [rideCount, setRideCount] = useState(0);
+  const [weightedRating, setWeightedRating] = useState<number | null>(null);
+  const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
     if (open && userId) {
@@ -25,30 +25,34 @@ export const UserProfileDialog = ({ open, onOpenChange, userId }: UserProfileDia
   const fetchProfile = async () => {
     const { data } = await supabase
       .from('profiles')
-      .select('name, photo, program')
+      .select('name, photo, program, venmo_username')
       .eq('id', userId)
       .single();
 
     setProfile(data);
 
-    // Fetch ratings
-    const { data: ratings } = await supabase
-      .from('user_ratings')
-      .select('rating')
-      .eq('rated_user_id', userId);
+    // Fetch ride stats
+    const { data: rideStats } = await supabase.rpc('get_user_ride_stats', {
+      user_uuid: userId
+    });
 
-    if (ratings && ratings.length > 0) {
-      const avg = ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length;
-      setAvgRating(avg);
+    if (rideStats && rideStats.length > 0) {
+      setStats(rideStats[0]);
+
+      // Calculate weighted rating if user has completed rides
+      if (rideStats[0].completed_rides > 0) {
+        const { data: ratings } = await supabase
+          .from('user_ratings')
+          .select('rating')
+          .eq('rated_user_id', userId);
+
+        if (ratings && ratings.length > 0) {
+          const avg = ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length;
+          const weighted = (avg * rideStats[0].completion_percentage) / 100;
+          setWeightedRating(weighted);
+        }
+      }
     }
-
-    // Count rides
-    const { count } = await supabase
-      .from('ride_members')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
-
-    setRideCount(count || 0);
   };
 
   if (!profile) return null;
@@ -73,27 +77,51 @@ export const UserProfileDialog = ({ open, onOpenChange, userId }: UserProfileDia
             <p className="text-sm text-muted-foreground">{profile.program}</p>
           </div>
 
-          {avgRating !== null && (
-            <div className="flex items-center gap-2">
-              <div className="flex">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    className={`h-5 w-5 ${
-                      star <= Math.round(avgRating)
-                        ? 'fill-yellow-400 text-yellow-400'
-                        : 'text-muted-foreground'
-                    }`}
-                  />
-                ))}
-              </div>
-              <span className="text-sm text-muted-foreground">
-                {avgRating.toFixed(1)} average rating
-              </span>
+          <div className="w-full space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Completed Rides</span>
+              <span className="font-medium">{stats?.completed_rides || 0}</span>
             </div>
-          )}
+            
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Completion Rate</span>
+              <span className="font-medium">{stats?.completion_percentage || 0}%</span>
+            </div>
+            
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">User Rating</span>
+              {weightedRating !== null ? (
+                <div className="flex items-center gap-2">
+                  <div className="flex">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`h-4 w-4 ${
+                          star <= Math.round(weightedRating)
+                            ? 'fill-yellow-400 text-yellow-400'
+                            : 'text-muted-foreground'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="font-medium">{weightedRating.toFixed(1)}</span>
+                </div>
+              ) : (
+                <span className="font-medium">N/A</span>
+              )}
+            </div>
+          </div>
 
-          <Badge variant="secondary">{rideCount} rides completed</Badge>
+          {profile?.venmo_username && (
+            <a
+              href={`https://venmo.com/${profile.venmo_username}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-center text-sm font-medium"
+            >
+              Send Payment via Venmo
+            </a>
+          )}
         </div>
       </DialogContent>
     </Dialog>

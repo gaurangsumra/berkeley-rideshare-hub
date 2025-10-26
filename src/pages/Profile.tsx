@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Navigation } from "@/components/Navigation";
 import { toast } from "sonner";
-import { LogOut, User, Upload, X } from "lucide-react";
+import { LogOut, User, Upload, X, Star } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PhotoEditorDialog } from "@/components/PhotoEditorDialog";
 
@@ -16,10 +16,13 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [program, setProgram] = useState("");
+  const [venmoUsername, setVenmoUsername] = useState("");
   const [uploading, setUploading] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [stats, setStats] = useState<any>(null);
+  const [weightedRating, setWeightedRating] = useState<number | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -55,7 +58,31 @@ const Profile = () => {
       if (error) throw error;
       setProfile(data);
       setProgram(data.program || "");
+      setVenmoUsername(data.venmo_username || "");
       setPhotoUrl(data.photo || null);
+
+      // Fetch ride stats
+      const { data: rideStats } = await supabase.rpc('get_user_ride_stats', {
+        user_uuid: userId
+      });
+
+      if (rideStats && rideStats.length > 0) {
+        setStats(rideStats[0]);
+
+        // Calculate weighted rating if user has completed rides
+        if (rideStats[0].completed_rides > 0) {
+          const { data: ratings } = await supabase
+            .from('user_ratings')
+            .select('rating')
+            .eq('rated_user_id', userId);
+
+          if (ratings && ratings.length > 0) {
+            const avg = ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length;
+            const weighted = (avg * rideStats[0].completion_percentage) / 100;
+            setWeightedRating(weighted);
+          }
+        }
+      }
     } catch (error: any) {
       toast.error("Failed to load profile");
     }
@@ -75,6 +102,25 @@ const Profile = () => {
       toast.success("Program updated successfully");
     } catch (error: any) {
       toast.error("Failed to update program");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateVenmo = async () => {
+    if (!profile) return;
+    
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ venmo_username: venmoUsername })
+        .eq('id', profile.id);
+
+      if (error) throw error;
+      toast.success("Venmo username updated successfully");
+    } catch (error: any) {
+      toast.error("Failed to update Venmo username");
     } finally {
       setLoading(false);
     }
@@ -288,6 +334,23 @@ const Profile = () => {
                 </Button>
               </div>
             )}
+            <div>
+              <Label htmlFor="venmo">Venmo Username (Optional)</Label>
+              <Input
+                id="venmo"
+                value={venmoUsername}
+                onChange={(e) => setVenmoUsername(e.target.value)}
+                placeholder="e.g., @yourvenmo"
+                className="mt-1"
+              />
+              <Button
+                onClick={handleUpdateVenmo}
+                disabled={loading || venmoUsername === profile.venmo_username}
+                className="mt-2"
+              >
+                Update Venmo
+              </Button>
+            </div>
             {profile.is_invited_user && (
               <div className="bg-muted p-3 rounded-lg">
                 <p className="text-sm text-muted-foreground">
@@ -295,6 +358,33 @@ const Profile = () => {
                 </p>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Ride Statistics</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Completed Rides</span>
+              <span className="font-semibold">{stats?.completed_rides || 0}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Completion Rate</span>
+              <span className="font-semibold">{stats?.completion_percentage || 0}%</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">User Rating</span>
+              {weightedRating !== null ? (
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{weightedRating.toFixed(1)}</span>
+                  <span className="text-sm text-muted-foreground">/ 5.0</span>
+                </div>
+              ) : (
+                <span className="font-semibold text-muted-foreground">N/A</span>
+              )}
+            </div>
           </CardContent>
         </Card>
 

@@ -9,6 +9,7 @@ import { RideGroupChat } from "@/components/RideGroupChat";
 import { CapacityVisualization } from "@/components/CapacityVisualization";
 import { ShareRideDetails } from "@/components/ShareRideDetails";
 import { UserProfileDialog } from "@/components/UserProfileDialog";
+import { RatingBadge } from "@/components/RatingBadge";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { MeetingPointVoting } from "@/components/MeetingPointVoting";
@@ -464,8 +465,11 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
                     {member.name.split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <p className="text-sm font-medium">{member.name}</p>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">{member.name}</p>
+                    <RatingBadge userId={member.id} size="small" />
+                  </div>
                   <p className="text-xs text-muted-foreground">{member.program}</p>
                 </div>
               </div>

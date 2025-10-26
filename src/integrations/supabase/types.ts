@@ -315,6 +315,7 @@ export type Database = {
           name: string
           photo: string | null
           program: string | null
+          venmo_username: string | null
         }
         Insert: {
           created_at?: string | null
@@ -325,6 +326,7 @@ export type Database = {
           name: string
           photo?: string | null
           program?: string | null
+          venmo_username?: string | null
         }
         Update: {
           created_at?: string | null
@@ -335,6 +337,7 @@ export type Database = {
           name?: string
           photo?: string | null
           program?: string | null
+          venmo_username?: string | null
         }
         Relationships: [
           {
@@ -703,6 +706,14 @@ export type Database = {
       }
     }
     Functions: {
+      get_user_ride_stats: {
+        Args: { user_uuid: string }
+        Returns: {
+          completed_rides: number
+          completion_percentage: number
+          total_rides: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
