@@ -13,6 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { debounce } from "@/lib/utils";
 import { format } from "date-fns";
@@ -48,6 +51,9 @@ export const CreateEventDialog = ({
     destination: "",
     city: "",
     description: "",
+    travelMode: "Rideshare (Uber/Lyft)",
+    maxCapacity: 3,
+    minCapacity: 1,
   });
 
   const searchSimilarEvents = async () => {
@@ -116,18 +122,67 @@ export const CreateEventDialog = ({
 
       const dateTime = new Date(`${formData.date}T${formData.time}`).toISOString();
 
-      const { error } = await supabase.from('events').insert({
-        name: formData.name,
-        date_time: dateTime,
-        destination: formData.destination,
-        city: formData.city,
-        description: formData.description || null,
-        created_by: session.user.id,
-      });
+      // Create event
+      const { data: newEvent, error: eventError } = await supabase
+        .from('events')
+        .insert({
+          name: formData.name,
+          date_time: dateTime,
+          destination: formData.destination,
+          city: formData.city,
+          description: formData.description || null,
+          created_by: session.user.id,
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (eventError) throw eventError;
 
-      toast.success("Event created successfully!");
+      // Calculate departure time (1 hour before event)
+      const eventDateTime = new Date(dateTime);
+      const departureTime = new Date(eventDateTime.getTime() - 60 * 60 * 1000).toISOString();
+      
+      const isCarpool = formData.travelMode === 'Carpool (Student Driver)';
+      const totalCapacity = isCarpool ? formData.maxCapacity + 1 : 4;
+
+      // Create ride group
+      const { data: rideGroup, error: rideError } = await supabase
+        .from('ride_groups')
+        .insert({
+          event_id: newEvent.id,
+          departure_time: departureTime,
+          travel_mode: formData.travelMode,
+          capacity: totalCapacity,
+          min_capacity: isCarpool ? formData.minCapacity : 1,
+          created_by: session.user.id,
+        })
+        .select()
+        .single();
+
+      if (rideError) {
+        toast.error("Event created but failed to create ride group. You can create one manually.");
+        onOpenChange(false);
+        onEventCreated();
+        return;
+      }
+
+      // Add creator as member
+      const role = isCarpool ? 'driver' : null;
+      const { error: memberError } = await supabase
+        .from('ride_members')
+        .insert({
+          ride_id: rideGroup.id,
+          user_id: session.user.id,
+          status: 'joined',
+          role: role,
+        });
+
+      if (memberError) {
+        toast.error("Event and ride group created, but failed to join. Please join manually.");
+      } else {
+        toast.success("Event and ride group created successfully!");
+      }
+
       onOpenChange(false);
       onEventCreated();
       setFormData({
@@ -137,6 +192,9 @@ export const CreateEventDialog = ({
         destination: "",
         city: "",
         description: "",
+        travelMode: "Rideshare (Uber/Lyft)",
+        maxCapacity: 3,
+        minCapacity: 1,
       });
     } catch (error: any) {
       toast.error(error.message || "Failed to create event");
@@ -147,15 +205,16 @@ export const CreateEventDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[550px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Create New Event</DialogTitle>
           <DialogDescription>
-            Add a new event for students to coordinate rides
+            Add a new event and automatically create your ride group
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="name">Event Name *</Label>
             <Input
@@ -223,6 +282,90 @@ export const CreateEventDialog = ({
             />
           </div>
 
+          <Separator className="my-6" />
+
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-semibold text-base">Your Ride Preferences *</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                You'll be automatically added to a ride group for this event
+              </p>
+            </div>
+
+            <div>
+              <Label>Travel Mode</Label>
+              <RadioGroup
+                value={formData.travelMode}
+                onValueChange={(value) => setFormData({ ...formData, travelMode: value })}
+                className="mt-2 space-y-3"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Rideshare (Uber/Lyft)" id="rideshare" />
+                    <Label htmlFor="rideshare" className="font-normal cursor-pointer">
+                      Rideshare (Splitting an Uber/Lyft)
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground ml-6">
+                    No car needed - split the cost with the group
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Carpool (Student Driver)" id="carpool" />
+                    <Label htmlFor="carpool" className="font-normal cursor-pointer">
+                      Carpool (Student Driver Needed)
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground ml-6">
+                    {formData.travelMode === 'Carpool (Student Driver)' 
+                      ? "✓ You'll be the driver for this ride" 
+                      : "You'll drive your car and offer rides"}
+                  </p>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {formData.travelMode === 'Carpool (Student Driver)' && (
+              <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <Label htmlFor="maxCapacity">Maximum Passengers (excluding driver)</Label>
+                  <Input
+                    id="maxCapacity"
+                    type="number"
+                    min="1"
+                    max="7"
+                    value={formData.maxCapacity}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      maxCapacity: Math.max(1, Math.min(7, parseInt(e.target.value) || 1)),
+                      minCapacity: Math.min(formData.minCapacity, parseInt(e.target.value) || 1)
+                    })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="minCapacity">Minimum Passengers Needed</Label>
+                  <Input
+                    id="minCapacity"
+                    type="number"
+                    min="1"
+                    max={formData.maxCapacity}
+                    value={formData.minCapacity}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      minCapacity: Math.max(1, Math.min(formData.maxCapacity, parseInt(e.target.value) || 1))
+                    })}
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Need at least {formData.minCapacity} passenger{formData.minCapacity > 1 ? 's' : ''}, max {formData.maxCapacity}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
           {similarEvents.length > 0 && (
             <div className="border-2 border-amber-500 rounded-lg p-4 bg-amber-50 dark:bg-amber-950/20">
               <div className="flex items-start gap-2 mb-3">
@@ -281,6 +424,7 @@ export const CreateEventDialog = ({
             </Button>
           </div>
         </form>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
