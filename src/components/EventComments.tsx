@@ -3,9 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { MessageSquare, Send } from "lucide-react";
+import { MessageSquare, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Comment {
   id: string;
@@ -27,6 +37,16 @@ export const EventComments = ({ eventId }: EventCommentsProps) => {
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [deleteCommentId, setDeleteCommentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id || null);
+    };
+    getCurrentUser();
+  }, []);
 
   useEffect(() => {
     if (expanded) {
@@ -105,6 +125,20 @@ export const EventComments = ({ eventId }: EventCommentsProps) => {
     setLoading(false);
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    const { error } = await supabase
+      .from('event_comments')
+      .delete()
+      .eq('id', commentId);
+
+    if (error) {
+      toast.error("Failed to delete comment");
+    } else {
+      toast.success("Comment deleted");
+    }
+    setDeleteCommentId(null);
+  };
+
   return (
     <div className="border-t pt-3 mt-3">
       <Button
@@ -139,19 +173,32 @@ export const EventComments = ({ eventId }: EventCommentsProps) => {
           {/* Comments list */}
           <div className="space-y-3 max-h-60 overflow-y-auto">
             {comments.map((comment) => (
-              <div key={comment.id} className="flex gap-2 text-sm">
+              <div key={comment.id} className="flex gap-2 text-sm group">
                 <Avatar className="w-8 h-8">
                   <AvatarImage src={comment.profiles?.photo || undefined} />
                   <AvatarFallback>
                     {comment.profiles?.name?.[0] || '?'}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
+                <div className="flex-1 relative">
                   <div className="flex items-baseline gap-2">
                     <span className="font-medium">{comment.profiles?.name}</span>
                     <span className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                     </span>
+                    {currentUserId === comment.user_id && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteCommentId(comment.id);
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    )}
                   </div>
                   <p className="text-muted-foreground mt-1">{comment.comment}</p>
                 </div>
@@ -160,6 +207,26 @@ export const EventComments = ({ eventId }: EventCommentsProps) => {
           </div>
         </div>
       )}
+
+      <AlertDialog open={!!deleteCommentId} onOpenChange={() => setDeleteCommentId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Comment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this comment? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteCommentId && handleDeleteComment(deleteCommentId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
