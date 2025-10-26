@@ -24,47 +24,9 @@ const Onboarding = () => {
         return;
       }
 
-      // Validate user access (Berkeley email or valid invite token)
-      const hasAccess = await validateUserAccess(
-        session.user.id,
-        session.user.email || ''
-      );
-
-      if (!hasAccess) {
-        // Sign out unauthorized user
-        await supabase.auth.signOut();
-        toast.error("Access denied. Only Berkeley students or invited users can access this platform.");
-        navigate("/auth");
-        return;
-      }
-
       fetchProfile(session.user.id);
     });
   }, [navigate]);
-
-  const validateUserAccess = async (userId: string, userEmail: string) => {
-    // Check if Berkeley email
-    const isBerkeleyEmail = userEmail.toLowerCase().endsWith('@berkeley.edu');
-    
-    if (isBerkeleyEmail) {
-      return true; // Berkeley users always allowed
-    }
-    
-    // Non-Berkeley user - check database profile instead of URL
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('is_invited_user, invited_via_ride_id')
-      .eq('id', userId)
-      .single();
-    
-    if (error || !profile) {
-      console.error('Error fetching profile:', error);
-      return false;
-    }
-    
-    // Check if user was marked as invited during signup
-    return profile.is_invited_user === true && profile.invited_via_ride_id !== null;
-  };
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -79,9 +41,25 @@ const Onboarding = () => {
       setProfile(data);
       setPhotoUrl(data.photo || null);
 
-      // If user already has a photo, redirect to events
+      // Auto-update is_invited_user flag based on email domain
+      const isExternal = !data.email?.toLowerCase().endsWith('@berkeley.edu');
+      if (data.is_invited_user !== isExternal) {
+        await supabase
+          .from('profiles')
+          .update({ is_invited_user: isExternal })
+          .eq('id', userId);
+        
+        // Update local state
+        setProfile({ ...data, is_invited_user: isExternal });
+      }
+
+      // If user already has a photo, onboarding is complete - redirect appropriately
       if (data.photo) {
-        navigate("/events");
+        if (isExternal) {
+          navigate("/my-rides");
+        } else {
+          navigate("/events");
+        }
       }
     } catch (error: any) {
       toast.error("Failed to load profile");

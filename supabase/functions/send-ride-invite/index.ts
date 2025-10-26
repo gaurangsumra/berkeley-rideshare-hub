@@ -71,9 +71,10 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       // Use request origin to build correct frontend URL
-      const origin = req.headers.get('origin') || req.headers.get('referer') || 'https://rizftvjircbgfsamrvdf.lovable.app';
-      const frontendUrl = origin.replace(/\/$/, '');
-      const registrationLink = `${frontendUrl}/auth?invite=${inviteToken}`;
+    const configuredUrl = Deno.env.get('FRONTEND_URL');
+    const origin = req.headers.get('origin') || req.headers.get('referer') || 'https://rizftvjircbgfsamrvdf.lovable.app';
+    const frontendUrl = (configuredUrl || origin).replace(/\/$/, '');
+    const registrationLink = `${frontendUrl}/auth?invite=${inviteToken}`;
       
       console.log('Generated shareable invite link:', registrationLink);
       

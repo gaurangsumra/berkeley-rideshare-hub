@@ -156,11 +156,6 @@ const Auth = () => {
     
     const isBerkeleyEmail = email.toLowerCase().endsWith('@berkeley.edu');
     
-    if (!isBerkeleyEmail && !inviteToken) {
-      toast.error("You need a @berkeley.edu email or an invite link to sign up");
-      return;
-    }
-    
     if (isBerkeleyEmail && !program) {
       toast.error("Please enter your program");
       return;
