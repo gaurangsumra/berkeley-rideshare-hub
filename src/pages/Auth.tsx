@@ -203,10 +203,17 @@ const Auth = () => {
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
+      
+      // Build redirect URL with invite token if present
+      let redirectUrl = `${window.location.origin}/onboarding`;
+      if (inviteToken) {
+        redirectUrl += `?invite=${inviteToken}`;
+      }
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/onboarding`,
+          redirectTo: redirectUrl,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent'
@@ -246,8 +253,8 @@ const Auth = () => {
             <CardTitle>Welcome to Berkeley Rides</CardTitle>
             <CardDescription>
               {inviteToken 
-                ? "You've been invited to join a ride! Create your account to continue."
-                : "Use your @berkeley.edu email to access the platform. New users will receive a verification email."}
+                ? "You've been invited to join a ride! Sign in with Google to continue."
+                : "Berkeley students: Sign in with your Google account. New users will need to complete onboarding."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

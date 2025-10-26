@@ -17,8 +17,22 @@ const Onboarding = () => {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
+        navigate("/auth");
+        return;
+      }
+
+      // Validate user access (Berkeley email or valid invite token)
+      const hasAccess = await validateUserAccess(
+        session.user.id,
+        session.user.email || ''
+      );
+
+      if (!hasAccess) {
+        // Sign out unauthorized user
+        await supabase.auth.signOut();
+        toast.error("Access denied. Only Berkeley students or invited users can access this platform.");
         navigate("/auth");
         return;
       }
@@ -26,6 +40,55 @@ const Onboarding = () => {
       fetchProfile(session.user.id);
     });
   }, [navigate]);
+
+  const validateUserAccess = async (userId: string, userEmail: string) => {
+    // Check if Berkeley email
+    const isBerkeleyEmail = userEmail.toLowerCase().endsWith('@berkeley.edu');
+    
+    if (isBerkeleyEmail) {
+      return true; // Berkeley users always allowed
+    }
+    
+    // Non-Berkeley user - check for invite token
+    const params = new URLSearchParams(window.location.search);
+    const inviteToken = params.get('invite');
+    
+    if (!inviteToken) {
+      return false; // No invite token, reject
+    }
+    
+    // Validate the invite token
+    const { data: inviteData, error } = await supabase
+      .from('ride_invites')
+      .select('ride_id, expires_at, max_uses, use_count')
+      .eq('invite_token', inviteToken)
+      .single();
+    
+    if (error || !inviteData) {
+      return false;
+    }
+    
+    // Check expiration
+    if (new Date(inviteData.expires_at) < new Date()) {
+      return false;
+    }
+    
+    // Check max uses
+    if (inviteData.max_uses && inviteData.use_count >= inviteData.max_uses) {
+      return false;
+    }
+    
+    // Valid invite - update profile with invite info
+    await supabase
+      .from('profiles')
+      .update({ 
+        is_invited_user: true,
+        invited_via_ride_id: inviteData.ride_id 
+      })
+      .eq('id', userId);
+    
+    return true;
+  };
 
   const fetchProfile = async (userId: string) => {
     try {
