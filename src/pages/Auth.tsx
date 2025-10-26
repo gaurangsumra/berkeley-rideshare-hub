@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Check, MapPin, Wallet } from "lucide-react";
+import { Check, MapPin, Wallet, ArrowRight, Info } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import campanileImage from "@/assets/campanile-bay.jpg";
+import { AboutSheet } from "@/components/AboutSheet";
 
 
 const Auth = () => {
@@ -496,6 +497,19 @@ const Auth = () => {
                   <p className="text-xs text-muted-foreground">Split costs and save money on transportation</p>
                 </div>
               </div>
+            </div>
+
+            {/* About Link */}
+            <div className="pt-4 border-t flex justify-center">
+              <AboutSheet
+                trigger={
+                  <Button variant="link" className="text-sm text-muted-foreground hover:text-foreground gap-1">
+                    <Info className="w-4 h-4" />
+                    Learn more about Berkeley Rides
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                }
+              />
             </div>
           </CardContent>
         </Card>

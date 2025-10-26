@@ -215,6 +215,56 @@ export type Database = {
           },
         ]
       }
+      feedback_submissions: {
+        Row: {
+          admin_notes: string | null
+          contact_email: string
+          created_at: string | null
+          description: string
+          feedback_type: string
+          id: string
+          ride_id: string | null
+          status: string | null
+          subject: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          contact_email: string
+          created_at?: string | null
+          description: string
+          feedback_type: string
+          id?: string
+          ride_id?: string | null
+          status?: string | null
+          subject: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          contact_email?: string
+          created_at?: string | null
+          description?: string
+          feedback_type?: string
+          id?: string
+          ride_id?: string | null
+          status?: string | null
+          subject?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_submissions_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "ride_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_votes: {
         Row: {
           created_at: string | null

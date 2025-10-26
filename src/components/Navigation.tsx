@@ -1,8 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
-import { Calendar, Car, User } from "lucide-react";
+import { Calendar, Car, User, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserAuthorization } from "@/hooks/useUserAuthorization";
 import { NotificationBell } from "@/components/NotificationBell";
+import { AboutSheet } from "@/components/AboutSheet";
+import { Button } from "@/components/ui/button";
 
 export const Navigation = () => {
   const location = useLocation();
@@ -21,8 +23,15 @@ export const Navigation = () => {
 
   return (
     <>
-      {/* Notification bell in top right corner */}
-      <div className="fixed top-4 right-4 z-50">
+      {/* Top right icons */}
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+        <AboutSheet
+          trigger={
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <Info className="h-5 w-5" />
+            </Button>
+          }
+        />
         <NotificationBell />
       </div>
       
