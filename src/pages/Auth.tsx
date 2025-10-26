@@ -96,16 +96,45 @@ const Auth = () => {
     }
   };
 
-  const validateBerkeleyEmail = (email: string): boolean => {
-    // Skip Berkeley email validation if user has an invite token
-    if (inviteToken) return true;
-    return email.toLowerCase().endsWith('@berkeley.edu');
+  const validateBerkeleyEmail = async (email: string): Promise<boolean> => {
+    // Always allow Berkeley emails
+    if (email.toLowerCase().endsWith('@berkeley.edu')) {
+      return true;
+    }
+    
+    // Non-Berkeley email - check for valid invite token
+    if (!inviteToken) {
+      return false; // No invite, reject
+    }
+    
+    // Validate the invite token exists and is active
+    const { data: inviteData, error } = await supabase
+      .from('ride_invites')
+      .select('expires_at, max_uses, use_count')
+      .eq('invite_token', inviteToken)
+      .single();
+    
+    if (error || !inviteData) {
+      return false; // Invalid token
+    }
+    
+    // Check expiration
+    if (new Date(inviteData.expires_at) < new Date()) {
+      return false; // Expired
+    }
+    
+    // Check max uses
+    if (inviteData.max_uses && inviteData.use_count >= inviteData.max_uses) {
+      return false; // Limit reached
+    }
+    
+    return true; // Valid invite token
   };
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateBerkeleyEmail(email)) {
+    if (!(await validateBerkeleyEmail(email))) {
       toast.error("Please use your @berkeley.edu email address");
       return;
     }
@@ -170,7 +199,7 @@ const Auth = () => {
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateBerkeleyEmail(email)) {
+    if (!(await validateBerkeleyEmail(email))) {
       toast.error("Please use your @berkeley.edu email address");
       return;
     }
