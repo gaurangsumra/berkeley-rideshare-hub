@@ -2,6 +2,8 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, MapPin, Clock } from "lucide-react";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { EventComments } from "./EventComments";
 
 interface Event {
   id: string;
@@ -10,6 +12,7 @@ interface Event {
   destination: string;
   city: string;
   description: string | null;
+  ride_group_count?: number;
 }
 
 interface EventCardProps {
@@ -25,7 +28,14 @@ export const EventCard = ({ event }: EventCardProps) => {
       onClick={() => navigate(`/events/${event.id}`)}
     >
       <CardContent className="p-6">
-        <h3 className="text-xl font-semibold text-primary mb-3">{event.name}</h3>
+        <div className="flex items-start justify-between mb-3">
+          <h3 className="text-xl font-semibold text-primary">{event.name}</h3>
+          {event.ride_group_count !== undefined && (
+            <Badge variant="secondary" className="ml-2 shrink-0">
+              {event.ride_group_count} {event.ride_group_count === 1 ? 'group' : 'groups'}
+            </Badge>
+          )}
+        </div>
         
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
@@ -57,6 +67,8 @@ export const EventCard = ({ event }: EventCardProps) => {
             {event.description}
           </p>
         )}
+
+        <EventComments eventId={event.id} />
       </CardContent>
     </Card>
   );

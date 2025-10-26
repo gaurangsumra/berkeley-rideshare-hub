@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Calendar, Search, ChevronDown } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Search, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { Navigation } from "@/components/Navigation";
 import { EventCard } from "@/components/EventCard";
@@ -16,6 +16,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
 
 interface Event {
   id: string;
@@ -25,6 +28,7 @@ interface Event {
   city: string;
   description: string | null;
   created_by: string;
+  ride_group_count?: number;
 }
 
 const Events = () => {
@@ -35,6 +39,7 @@ const Events = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [dateFilter, setDateFilter] = useState<Date | undefined>();
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -79,9 +84,31 @@ const Events = () => {
           });
         
         if (error) throw error;
-        setEvents(data || []);
+        
+        // Fetch counts separately for search results
+        const eventIds = data?.map(e => e.id) || [];
+        if (eventIds.length > 0) {
+          const { data: counts } = await supabase
+            .from('ride_groups')
+            .select('event_id')
+            .in('event_id', eventIds);
+          
+          const countMap = counts?.reduce((acc, rg) => {
+            acc[rg.event_id] = (acc[rg.event_id] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>) || {};
+          
+          const eventsWithCounts = data?.map(e => ({
+            ...e,
+            ride_group_count: countMap[e.id] || 0
+          })) || [];
+          
+          setEvents(eventsWithCounts);
+        } else {
+          setEvents([]);
+        }
       } else {
-        // No search term - fetch all upcoming events
+        // No search term - fetch all upcoming events with ride group counts
         const { data, error } = await supabase
           .from('events')
           .select('*')
@@ -89,13 +116,96 @@ const Events = () => {
           .order('date_time', { ascending: true });
 
         if (error) throw error;
-        setEvents(data || []);
+        
+        // Fetch counts for all events
+        const eventIds = data?.map(e => e.id) || [];
+        if (eventIds.length > 0) {
+          const { data: counts } = await supabase
+            .from('ride_groups')
+            .select('event_id')
+            .in('event_id', eventIds);
+          
+          const countMap = counts?.reduce((acc, rg) => {
+            acc[rg.event_id] = (acc[rg.event_id] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>) || {};
+          
+          const eventsWithCounts = data?.map(e => ({
+            ...e,
+            ride_group_count: countMap[e.id] || 0
+          })) || [];
+          
+          setEvents(eventsWithCounts);
+        } else {
+          setEvents([]);
+        }
       }
     } catch (error: any) {
       toast.error("Failed to load events");
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchEventsByDate = async (date: Date) => {
+    try {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .gte('date_time', startOfDay.toISOString())
+        .lte('date_time', endOfDay.toISOString())
+        .order('date_time', { ascending: true });
+
+      if (error) throw error;
+      
+      // Fetch counts
+      const eventIds = data?.map(e => e.id) || [];
+      if (eventIds.length > 0) {
+        const { data: counts } = await supabase
+          .from('ride_groups')
+          .select('event_id')
+          .in('event_id', eventIds);
+        
+        const countMap = counts?.reduce((acc, rg) => {
+          acc[rg.event_id] = (acc[rg.event_id] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>) || {};
+        
+        const eventsWithCounts = data?.map(e => ({
+          ...e,
+          ride_group_count: countMap[e.id] || 0
+        })) || [];
+        
+        setEvents(eventsWithCounts);
+      } else {
+        setEvents([]);
+      }
+    } catch (error: any) {
+      toast.error("Failed to filter events by date");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const groupEventsByDate = (events: Event[]) => {
+    const grouped = events.reduce((acc, event) => {
+      const dateKey = format(new Date(event.date_time), 'EEEE, MMMM d, yyyy');
+      if (!acc[dateKey]) {
+        acc[dateKey] = [];
+      }
+      acc[dateKey].push(event);
+      return acc;
+    }, {} as Record<string, Event[]>);
+    
+    return Object.entries(grouped).sort(([dateA], [dateB]) => 
+      new Date(dateA).getTime() - new Date(dateB).getTime()
+    );
   };
 
   // Debounce search to avoid too many queries
@@ -111,14 +221,58 @@ const Events = () => {
     <div className="min-h-screen bg-background pb-20">
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         <div className="space-y-4 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-primary">Upcoming Events</h1>
-              <p className="text-muted-foreground mt-1">Find rides to off-campus events</p>
+          {/* Title always on top */}
+          <div className="text-center md:text-left">
+            <h1 className="text-3xl font-bold text-primary">Upcoming Events</h1>
+            <p className="text-muted-foreground mt-1">Find rides to off-campus events</p>
+          </div>
+          
+          {/* Search, date filter, and create button on same row below title */}
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Search events by name, destination, or city..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setDateFilter(undefined);
+                  debouncedSearch(e.target.value);
+                }}
+                className="pl-10"
+              />
             </div>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full sm:w-auto">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateFilter ? format(dateFilter, "MMM dd, yyyy") : "Filter by date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={dateFilter}
+                  onSelect={(date) => {
+                    setDateFilter(date);
+                    setSearchQuery("");
+                    if (date) {
+                      setLoading(true);
+                      fetchEventsByDate(date);
+                    } else {
+                      setLoading(true);
+                      fetchEvents();
+                    }
+                  }}
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="lg">
+                <Button className="w-full sm:w-auto">
                   <Plus className="w-4 h-4 mr-2" />
                   Create Event
                   <ChevronDown className="w-4 h-4 ml-2" />
@@ -126,7 +280,7 @@ const Events = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
-                  <Calendar className="w-4 h-4 mr-2" />
+                  <CalendarIcon className="w-4 h-4 mr-2" />
                   Import Calendar
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setCreateDialogOpen(true)}>
@@ -135,19 +289,6 @@ const Events = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-          
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Search events by name, destination, or city..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                debouncedSearch(e.target.value);
-              }}
-              className="pl-10"
-            />
           </div>
         </div>
 
@@ -168,20 +309,33 @@ const Events = () => {
               </p>
             </div>
           </div>
-        ) : events.length === 0 && searchQuery ? (
+        ) : events.length === 0 && (searchQuery || dateFilter) ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground mb-4">No events match your search</p>
+            <p className="text-muted-foreground mb-4">
+              {searchQuery ? "No events match your search" : "No events on this date"}
+            </p>
             <Button onClick={() => {
               setSearchQuery("");
+              setDateFilter(undefined);
+              setLoading(true);
               fetchEvents();
             }} variant="outline">
-              Clear search
+              Clear filters
             </Button>
           </div>
         ) : (
-          <div className="space-y-4">
-            {events.map((event) => (
-              <EventCard key={event.id} event={event} />
+          <div className="space-y-6">
+            {groupEventsByDate(events).map(([date, dateEvents]) => (
+              <div key={date} className="space-y-3">
+                <h2 className="text-lg font-semibold text-primary border-b pb-2">
+                  {date}
+                </h2>
+                <div className="space-y-3">
+                  {dateEvents.map((event) => (
+                    <EventCard key={event.id} event={event} />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         )}
