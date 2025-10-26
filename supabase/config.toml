@@ -14,3 +14,6 @@ verify_jwt = true
 
 [functions.send-ride-invite]
 verify_jwt = true
+
+[functions.send-ride-notification]
+verify_jwt = true

@@ -72,6 +72,33 @@ export const UberPaymentDialog = ({
       });
 
       if (error) throw error;
+
+      // Send email notifications to other members
+      const otherMembers = members.filter(m => m.id !== currentUserId);
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name, email')
+        .eq('id', currentUserId!)
+        .single();
+
+      const { data: memberEmails } = await supabase
+        .from('profiles')
+        .select('email')
+        .in('id', otherMembers.map(m => m.id));
+
+      if (memberEmails && memberEmails.length > 0) {
+        await supabase.functions.invoke('send-ride-notification', {
+          body: {
+            type: 'payment_request',
+            rideId: rideId,
+            recipientEmails: memberEmails.map(m => m.email),
+            actorName: profile?.name || 'A member',
+            amount: parseFloat(amount),
+            splitAmount: parseFloat(splitAmount.toFixed(2)),
+          }
+        });
+      }
+
       setStep('show-split');
     } catch (error: any) {
       toast.error("Failed to record payment");

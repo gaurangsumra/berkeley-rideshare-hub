@@ -147,7 +147,7 @@ export const MeetingPointVoting = ({
       console.log('Current meeting point:', currentMeetingPoint);
       console.log('Winner:', winner);
       
-      if (winner) {
+      if (winner && winner[0] !== currentMeetingPoint) {
         console.log('Updating meeting point to:', winner[0]);
         
         // Always update to ensure it reflects the highest votes
@@ -159,6 +159,31 @@ export const MeetingPointVoting = ({
         if (updateError) {
           console.error('Error updating meeting point:', updateError);
           throw updateError;
+        }
+
+        // Send email notifications to all members
+        const { data: rideMembers } = await supabase
+          .from('ride_members')
+          .select('user_id')
+          .eq('ride_id', rideId);
+
+        if (rideMembers && rideMembers.length > 0) {
+          const memberIds = rideMembers.map(m => m.user_id);
+          const { data: memberEmails } = await supabase
+            .from('profiles')
+            .select('email')
+            .in('id', memberIds);
+
+          if (memberEmails && memberEmails.length > 0) {
+            await supabase.functions.invoke('send-ride-notification', {
+              body: {
+                type: 'meeting_point_changed',
+                rideId: rideId,
+                recipientEmails: memberEmails.map(m => m.email),
+                meetingPoint: winner[0],
+              }
+            });
+          }
         }
         
         console.log('Meeting point updated successfully');

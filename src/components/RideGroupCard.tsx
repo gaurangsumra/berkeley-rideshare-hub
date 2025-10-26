@@ -222,6 +222,25 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
         });
       }
 
+      // Send email notifications
+      const { data: memberEmails } = await supabase
+        .from('profiles')
+        .select('email')
+        .in('id', memberIds);
+
+      if (memberEmails && memberEmails.length > 0) {
+        await supabase.functions.invoke('send-ride-notification', {
+          body: {
+            type: 'member_joined',
+            rideId: rideGroup.id,
+            recipientEmails: memberEmails.map(m => m.email),
+            actorName: profile?.name || 'Someone',
+            eventName: event.name,
+            meetingPoint: leaderMeetingPoint ?? rideGroup.meeting_point,
+          }
+        });
+      }
+
       // Check if group is ready (3/4 full)
       if (rideGroup.ride_members.length + 1 >= 3 && rideGroup.capacity === 4) {
         for (const memberId of [...memberIds, currentUserId]) {
@@ -260,6 +279,12 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
           .filter(m => m.user_id !== currentUserId)
           .map(m => m.user_id);
 
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', currentUserId)
+          .single();
+
         for (const memberId of memberIds) {
           await supabase.from('notifications').insert({
             user_id: memberId,
@@ -267,6 +292,24 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
             type: 'member_left',
             title: 'Member left your ride',
             message: `A member has left the ride group`,
+          });
+        }
+
+        // Send email notifications
+        const { data: memberEmails } = await supabase
+          .from('profiles')
+          .select('email')
+          .in('id', memberIds);
+
+        if (memberEmails && memberEmails.length > 0) {
+          await supabase.functions.invoke('send-ride-notification', {
+            body: {
+              type: 'member_left',
+              rideId: rideGroup.id,
+              recipientEmails: memberEmails.map(m => m.email),
+              actorName: profile?.name || 'Someone',
+              eventName: event.name,
+            }
           });
         }
       }
@@ -292,6 +335,25 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
     try {
       setLoading(true);
       
+      // Notify all members before deletion
+      const memberIds = rideGroup.ride_members.map(m => m.user_id);
+      const { data: memberEmails } = await supabase
+        .from('profiles')
+        .select('email')
+        .in('id', memberIds);
+
+      // Send email notifications before deletion
+      if (memberEmails && memberEmails.length > 0) {
+        await supabase.functions.invoke('send-ride-notification', {
+          body: {
+            type: 'ride_deleted',
+            rideId: rideGroup.id,
+            recipientEmails: memberEmails.map(m => m.email),
+            eventName: event.name,
+          }
+        });
+      }
+
       // First, explicitly delete all members to ensure clean state
       const { error: memberError } = await supabase
         .from('ride_members')
