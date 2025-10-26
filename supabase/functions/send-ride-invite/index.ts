@@ -24,18 +24,21 @@ const handler = async (req: Request): Promise<Response> => {
     
     const authHeader = req.headers.get('authorization');
     console.log('Auth header present:', !!authHeader, 'prefix:', authHeader?.slice(0, 20));
-    
     if (!authHeader) {
       throw new Error('Missing authorization header');
     }
+    const jwt = authHeader.replace(/^Bearer\s+/i, '').trim();
 
     // Create user-scoped client for auth validation
     const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { authorization: authHeader } },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
     });
 
-    // Validate user authentication
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
+    // Validate user authentication using the provided JWT
+    const { data: { user }, error: userError } = await supabaseUser.auth.getUser(jwt);
     console.log('getUser error:', userError?.message, 'user found:', !!user);
     
     if (userError || !user) {
