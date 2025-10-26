@@ -62,6 +62,9 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
   const [leaderMeetingPoint, setLeaderMeetingPoint] = useState<string | null>(null);
 
   const isMember = currentUserId && rideGroup.ride_members.some(m => m.user_id === currentUserId);
@@ -385,7 +388,14 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
           </p>
           <div className="space-y-2">
             {members.filter(m => !isCarpool || m.id !== driver?.id).map((member) => (
-              <div key={member.id} className="flex items-center gap-3">
+              <div 
+                key={member.id} 
+                className="flex items-center gap-3 cursor-pointer hover:bg-accent/50 p-2 rounded-lg transition-colors"
+                onClick={() => {
+                  setSelectedProfile(member.id);
+                  setShowProfileDialog(true);
+                }}
+              >
                 <Avatar className="w-8 h-8">
                   <AvatarImage src={member.photo || undefined} />
                   <AvatarFallback>
@@ -420,7 +430,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
                 </Button>
               ) : (
                 <Button
-                  onClick={handleLeaveRide}
+                  onClick={() => setShowLeaveDialog(true)}
                   variant="outline"
                   disabled={loading}
                   className="flex-1"
@@ -436,8 +446,23 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
                 Vote Meeting Point
               </Button>
               <Button
+                onClick={() => setShowChat(true)}
+                variant="outline"
+                title="Chat with group"
+              >
+                <MessageCircle className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={() => setShowShare(true)}
+                variant="outline"
+                title="Share ride details"
+              >
+                <Share2 className="w-4 h-4" />
+              </Button>
+              <Button
                 onClick={() => setShowInvite(true)}
                 variant="outline"
+                title="Invite others"
               >
                 <UserPlus className="w-4 h-4" />
               </Button>
@@ -480,6 +505,54 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
           rideId={rideGroup.id}
         />
       )}
+
+      {isMember && (
+        <RideGroupChat
+          open={showChat}
+          onOpenChange={setShowChat}
+          rideId={rideGroup.id}
+          rideName={`${event.destination} - ${format(new Date(rideGroup.departure_time), 'MMM d, h:mm a')}`}
+        />
+      )}
+
+      {isMember && (
+        <ShareRideDetails
+          event={event}
+          ride={rideGroup}
+          members={members}
+          driver={driver}
+          open={showShare}
+          onOpenChange={setShowShare}
+        />
+      )}
+
+      {showProfileDialog && selectedProfile && (
+        <UserProfileDialog
+          open={showProfileDialog}
+          onOpenChange={setShowProfileDialog}
+          userId={selectedProfile}
+        />
+      )}
+
+      <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave Ride Group</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to leave this ride group? You can rejoin later if there's still space.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLeaveRide}
+              disabled={loading}
+            >
+              {loading ? "Leaving..." : "Leave"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>

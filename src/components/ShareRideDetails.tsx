@@ -26,11 +26,17 @@ interface ShareRideDetailsProps {
   };
   members: Profile[];
   driver?: Profile | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export const ShareRideDetails = ({ event, ride, members, driver }: ShareRideDetailsProps) => {
-  const [open, setOpen] = useState(false);
+export const ShareRideDetails = ({ event, ride, members, driver, open: externalOpen, onOpenChange }: ShareRideDetailsProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
   const { toast } = useToast();
+  
+  // Use external control if provided, otherwise use internal state
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
 
   const generateShareText = () => {
     const departureTime = format(new Date(ride.departure_time), "EEEE, MMMM d 'at' h:mm a");
@@ -77,12 +83,14 @@ Shared for safety purposes from Berkeley Rides`;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Share2 className="h-4 w-4 mr-2" />
-          Share Details
-        </Button>
-      </DialogTrigger>
+      {!externalOpen && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Share2 className="h-4 w-4 mr-2" />
+            Share Details
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Share Ride Details</DialogTitle>
