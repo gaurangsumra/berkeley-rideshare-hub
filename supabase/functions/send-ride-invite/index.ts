@@ -179,10 +179,14 @@ const handler = async (req: Request): Promise<Response> => {
       throw insertError;
     }
 
-    // Use request origin to build correct frontend URL
+    // Build registration link using configured FRONTEND_URL or request origin
+    const configuredUrl = Deno.env.get('FRONTEND_URL');
     const origin = req.headers.get('origin') || req.headers.get('referer') || 'https://rizftvjircbgfsamrvdf.lovable.app';
-    const frontendUrl = origin.replace(/\/$/, '');
+    const baseUrl = configuredUrl || origin;
+    const frontendUrl = baseUrl.replace(/^http:/, 'https:').replace(/\/$/, '');
     const registrationLink = `${frontendUrl}/auth?invite=${inviteToken}`;
+    
+    console.log('Email invite registration link:', registrationLink, '(source:', configuredUrl ? 'FRONTEND_URL' : 'request headers', ')');
 
     const eventDate = new Date(event.date_time).toLocaleDateString('en-US', {
       weekday: 'long',
