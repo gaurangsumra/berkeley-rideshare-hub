@@ -4,7 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Clock, Users, MapPin, UserPlus, Trash2 } from "lucide-react";
+import { Clock, Users, MapPin, UserPlus, Trash2, MessageCircle, Share2 } from "lucide-react";
+import { RideGroupChat } from "@/components/RideGroupChat";
+import { CapacityVisualization } from "@/components/CapacityVisualization";
+import { ShareRideDetails } from "@/components/ShareRideDetails";
+import { UserProfileDialog } from "@/components/UserProfileDialog";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { MeetingPointVoting } from "@/components/MeetingPointVoting";
@@ -42,15 +46,22 @@ interface RideGroupCardProps {
   currentUserId: string | null;
   onUpdate: () => void;
   isAdmin: boolean;
+  event: {
+    name: string;
+    destination: string;
+    city: string;
+  };
 }
 
-export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: RideGroupCardProps) => {
+export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, event }: RideGroupCardProps) => {
   const [members, setMembers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
   const [showVoting, setShowVoting] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [leaderMeetingPoint, setLeaderMeetingPoint] = useState<string | null>(null);
 
   const isMember = currentUserId && rideGroup.ride_members.some(m => m.user_id === currentUserId);
@@ -189,6 +200,38 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: R
       });
 
       if (error) throw error;
+
+      // Notify other members
+      const memberIds = rideGroup.ride_members.map(m => m.user_id);
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', currentUserId)
+        .single();
+
+      for (const memberId of memberIds) {
+        await supabase.from('notifications').insert({
+          user_id: memberId,
+          ride_id: rideGroup.id,
+          type: 'member_joined',
+          title: 'New member joined',
+          message: `${profile?.name || 'Someone'} joined your ride group`,
+        });
+      }
+
+      // Check if group is ready (3/4 full)
+      if (rideGroup.ride_members.length + 1 >= 3 && rideGroup.capacity === 4) {
+        for (const memberId of [...memberIds, currentUserId]) {
+          await supabase.from('notifications').insert({
+            user_id: memberId,
+            ride_id: rideGroup.id,
+            type: 'group_ready',
+            title: 'Ride group almost full!',
+            message: `Your ride group is ${rideGroup.ride_members.length + 1}/4 full`,
+          });
+        }
+      }
+
       const message = role === 'rider' 
         ? `Joined as rider in ${driver?.name}'s ride!` 
         : "Joined ride group!";
@@ -206,6 +249,25 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: R
     
     try {
       setLoading(true);
+      
+      // Notify other members
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const memberIds = rideGroup.ride_members
+          .filter(m => m.user_id !== currentUserId)
+          .map(m => m.user_id);
+
+        for (const memberId of memberIds) {
+          await supabase.from('notifications').insert({
+            user_id: memberId,
+            ride_id: rideGroup.id,
+            type: 'member_left',
+            title: 'Member left your ride',
+            message: `A member has left the ride group`,
+          });
+        }
+      }
+
       const { error } = await supabase
         .from('ride_members')
         .delete()
@@ -214,6 +276,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin }: R
 
       if (error) throw error;
       toast.success("Left ride group");
+      setShowLeaveDialog(false);
       onUpdate();
     } catch (error: any) {
       toast.error(error.message || "Failed to leave ride");

@@ -2,21 +2,15 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, MapPin, Clock, Plus, Users, MoreVertical, Pencil, Trash2 } from "lucide-react";
-import { format } from "date-fns";
+import { Card, CardContent } from "@/components/ui/card";
+import { ArrowLeft, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { CreateRideDialog } from "@/components/CreateRideDialog";
 import { RideGroupCard } from "@/components/RideGroupCard";
 import { EditEventDialog } from "@/components/EditEventDialog";
+import { EventHero } from "@/components/EventHero";
 import { useUserRole } from "@/hooks/useUserRole";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { getTimeWindow, sortTimeWindows } from "@/lib/timeUtils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -159,6 +153,16 @@ const EventDetail = () => {
     );
   }
 
+  // Group rides by time windows
+  const groupedRides = rideGroups.reduce((acc, ride) => {
+    const window = getTimeWindow(new Date(ride.departure_time));
+    if (!acc[window]) acc[window] = [];
+    acc[window].push(ride);
+    return acc;
+  }, {} as Record<string, RideGroup[]>);
+
+  const sortedWindows = sortTimeWindows(Object.keys(groupedRides));
+
   return (
     <div className="min-h-screen bg-background pb-8">
       <div className="container mx-auto px-4 py-6 max-w-4xl">
@@ -171,61 +175,13 @@ const EventDetail = () => {
           Back to Events
         </Button>
 
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <CardTitle className="text-2xl">{event.name}</CardTitle>
-              {canModifyEvent && !roleLoading && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setEditEventOpen(true)}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Edit Event
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setDeleteDialogOpen(true)}
-                      className="text-destructive"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Event
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Calendar className="w-4 h-4" />
-              <span>{format(new Date(event.date_time), 'EEEE, MMMM d, yyyy')}</span>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="w-4 h-4" />
-              <span>{format(new Date(event.date_time), 'h:mm a')}</span>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <MapPin className="w-4 h-4" />
-              <a 
-                href={`https://www.google.com/maps?q=${encodeURIComponent(`${event.destination}, ${event.city}`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-primary hover:underline transition-colors"
-              >
-                {event.destination}, {event.city}
-              </a>
-            </div>
-            {event.description && (
-              <p className="text-sm text-muted-foreground pt-2 border-t">
-                {event.description}
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        <EventHero 
+          event={event}
+          isCreator={event.created_by === currentUserId}
+          isAdmin={isAdmin}
+          onEdit={() => setEditEventOpen(true)}
+          onDelete={() => setDeleteDialogOpen(true)}
+        />
 
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold text-primary">Ride Groups</h2>
@@ -247,27 +203,34 @@ const EventDetail = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {rideGroups.map((group) => (
-              <RideGroupCard
-                key={group.id}
-                rideGroup={group}
-                currentUserId={currentUserId}
-                onUpdate={fetchEventData}
-                isAdmin={isAdmin}
-              />
+          <div className="space-y-8">
+            {sortedWindows.map((window) => (
+              <div key={window} className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-px flex-1 bg-border" />
+                  <h3 className="text-lg font-semibold text-muted-foreground px-4">
+                    {window}
+                  </h3>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+                <div className="space-y-4">
+                  {groupedRides[window]
+                    .sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime())
+                    .map((group) => (
+                      <RideGroupCard
+                        key={group.id}
+                        rideGroup={group}
+                        currentUserId={currentUserId}
+                        onUpdate={fetchEventData}
+                        isAdmin={isAdmin}
+                        event={event}
+                      />
+                    ))}
+                </div>
+              </div>
             ))}
           </div>
         )}
-
-        <Card className="mt-6 bg-secondary/50">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">
-              <strong>Future Enhancement:</strong> Events will soon be automatically imported 
-              from Luma, Eventbrite, Partiful, and Campus Groups APIs.
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       <CreateRideDialog

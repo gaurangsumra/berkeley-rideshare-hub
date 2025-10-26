@@ -261,6 +261,50 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          read: boolean | null
+          ride_id: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          read?: boolean | null
+          ride_id?: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          read?: boolean | null
+          ride_id?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "ride_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -302,6 +346,41 @@ export type Database = {
           },
         ]
       }
+      ride_group_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          ride_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          ride_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          ride_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ride_group_messages_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "ride_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ride_groups: {
         Row: {
           capacity: number | null
@@ -311,6 +390,7 @@ export type Database = {
           event_id: string
           id: string
           meeting_point: string | null
+          min_capacity: number | null
           travel_mode: string
         }
         Insert: {
@@ -321,6 +401,7 @@ export type Database = {
           event_id: string
           id?: string
           meeting_point?: string | null
+          min_capacity?: number | null
           travel_mode: string
         }
         Update: {
@@ -331,6 +412,7 @@ export type Database = {
           event_id?: string
           id?: string
           meeting_point?: string | null
+          min_capacity?: number | null
           travel_mode?: string
         }
         Relationships: [
@@ -456,6 +538,35 @@ export type Database = {
           },
         ]
       }
+      ride_message_reads: {
+        Row: {
+          id: string
+          last_read_at: string | null
+          ride_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          last_read_at?: string | null
+          ride_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          last_read_at?: string | null
+          ride_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ride_message_reads_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "ride_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       uber_payments: {
         Row: {
           amount: number | null
@@ -498,6 +609,44 @@ export type Database = {
           },
           {
             foreignKeyName: "uber_payments_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "ride_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_ratings: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          id: string
+          rated_user_id: string
+          rater_user_id: string
+          rating: number | null
+          ride_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          rated_user_id: string
+          rater_user_id: string
+          rating?: number | null
+          ride_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          rated_user_id?: string
+          rater_user_id?: string
+          rating?: number | null
+          ride_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_ratings_ride_id_fkey"
             columns: ["ride_id"]
             isOneToOne: false
             referencedRelation: "ride_groups"
@@ -577,6 +726,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      notification_type:
+        | "new_message"
+        | "member_joined"
+        | "member_left"
+        | "group_full"
+        | "group_ready"
+        | "meeting_point_tie"
+        | "ride_starting_soon"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -705,6 +862,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      notification_type: [
+        "new_message",
+        "member_joined",
+        "member_left",
+        "group_full",
+        "group_ready",
+        "meeting_point_tie",
+        "ride_starting_soon",
+      ],
     },
   },
 } as const

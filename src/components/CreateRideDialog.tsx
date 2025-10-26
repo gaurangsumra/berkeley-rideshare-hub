@@ -42,6 +42,8 @@ export const CreateRideDialog = ({
     date: eventDate ? new Date(eventDate).toISOString().split('T')[0] : "",
     time: eventDate ? calculateDefaultTime(eventDate) : "",
     travelMode: "Rideshare (Uber/Lyft)",
+    maxCapacity: 3,
+    minCapacity: 1,
   });
 
   // Update form data when event date changes or dialog opens
@@ -51,6 +53,8 @@ export const CreateRideDialog = ({
         date: new Date(eventDate).toISOString().split('T')[0],
         time: calculateDefaultTime(eventDate),
         travelMode: "Rideshare (Uber/Lyft)",
+        maxCapacity: 3,
+        minCapacity: 1,
       });
     }
   }, [open, eventDate]);
@@ -69,6 +73,8 @@ export const CreateRideDialog = ({
       if (!session) throw new Error("Not authenticated");
 
       const departureTime = new Date(`${formData.date}T${formData.time}`).toISOString();
+      const isCarpool = formData.travelMode === 'Carpool (Student Driver)';
+      const totalCapacity = isCarpool ? formData.maxCapacity + 1 : 4; // +1 for driver in carpool
 
       const { data: rideGroup, error: rideError } = await supabase
         .from('ride_groups')
@@ -76,7 +82,8 @@ export const CreateRideDialog = ({
           event_id: eventId,
           departure_time: departureTime,
           travel_mode: formData.travelMode,
-          capacity: 4,
+          capacity: totalCapacity,
+          min_capacity: isCarpool ? formData.minCapacity : 1,
           created_by: session.user.id,
         })
         .select()
@@ -100,7 +107,13 @@ export const CreateRideDialog = ({
       toast.success("Ride group created successfully!");
       onOpenChange(false);
       onRideCreated();
-      setFormData({ date: "", time: "", travelMode: "Rideshare (Uber/Lyft)" });
+      setFormData({ 
+        date: "", 
+        time: "", 
+        travelMode: "Rideshare (Uber/Lyft)",
+        maxCapacity: 3,
+        minCapacity: 1,
+      });
     } catch (error: any) {
       toast.error(error.message || "Failed to create ride group");
     } finally {
@@ -175,6 +188,45 @@ export const CreateRideDialog = ({
               </div>
             </RadioGroup>
           </div>
+
+          {formData.travelMode === 'Carpool (Student Driver)' && (
+            <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+              <div>
+                <Label htmlFor="maxCapacity">Maximum Passengers (excluding driver)</Label>
+                <Input
+                  id="maxCapacity"
+                  type="number"
+                  min="1"
+                  max="7"
+                  value={formData.maxCapacity}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    maxCapacity: Math.max(1, Math.min(7, parseInt(e.target.value) || 1)),
+                    minCapacity: Math.min(formData.minCapacity, parseInt(e.target.value) || 1)
+                  })}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="minCapacity">Minimum Passengers Needed</Label>
+                <Input
+                  id="minCapacity"
+                  type="number"
+                  min="1"
+                  max={formData.maxCapacity}
+                  value={formData.minCapacity}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    minCapacity: Math.max(1, Math.min(formData.maxCapacity, parseInt(e.target.value) || 1))
+                  })}
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Need at least {formData.minCapacity} passenger{formData.minCapacity > 1 ? 's' : ''}, max {formData.maxCapacity}
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-2 justify-end pt-4">
             <Button
