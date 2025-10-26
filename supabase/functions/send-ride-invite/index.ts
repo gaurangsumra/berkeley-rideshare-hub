@@ -70,7 +70,9 @@ const handler = async (req: Request): Promise<Response> => {
         throw insertError;
       }
 
-      const frontendUrl = Deno.env.get('FRONTEND_URL') || Deno.env.get('SUPABASE_URL')!.replace('.supabase.co', '.lovable.app');
+      // Use request origin to build correct frontend URL
+      const origin = req.headers.get('origin') || req.headers.get('referer') || 'https://rizftvjircbgfsamrvdf.lovable.app';
+      const frontendUrl = origin.replace(/\/$/, '');
       const registrationLink = `${frontendUrl}/auth?invite=${inviteToken}`;
       
       console.log('Generated shareable invite link:', registrationLink);
@@ -176,7 +178,9 @@ const handler = async (req: Request): Promise<Response> => {
       throw insertError;
     }
 
-    const frontendUrl = Deno.env.get('FRONTEND_URL') || Deno.env.get('SUPABASE_URL')!.replace('.supabase.co', '.lovable.app');
+    // Use request origin to build correct frontend URL
+    const origin = req.headers.get('origin') || req.headers.get('referer') || 'https://rizftvjircbgfsamrvdf.lovable.app';
+    const frontendUrl = origin.replace(/\/$/, '');
     const registrationLink = `${frontendUrl}/auth?invite=${inviteToken}`;
 
     const eventDate = new Date(event.date_time).toLocaleDateString('en-US', {

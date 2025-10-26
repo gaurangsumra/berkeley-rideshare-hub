@@ -50,45 +50,20 @@ const Onboarding = () => {
       return true; // Berkeley users always allowed
     }
     
-    // Non-Berkeley user - check for invite token
-    const params = new URLSearchParams(window.location.search);
-    const inviteToken = params.get('invite');
-    
-    if (!inviteToken) {
-      return false; // No invite token, reject
-    }
-    
-    // Validate the invite token
-    const { data: inviteData, error } = await supabase
-      .from('ride_invites')
-      .select('ride_id, expires_at, max_uses, use_count')
-      .eq('invite_token', inviteToken)
+    // Non-Berkeley user - check database profile instead of URL
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('is_invited_user, invited_via_ride_id')
+      .eq('id', userId)
       .single();
     
-    if (error || !inviteData) {
+    if (error || !profile) {
+      console.error('Error fetching profile:', error);
       return false;
     }
     
-    // Check expiration
-    if (new Date(inviteData.expires_at) < new Date()) {
-      return false;
-    }
-    
-    // Check max uses
-    if (inviteData.max_uses && inviteData.use_count >= inviteData.max_uses) {
-      return false;
-    }
-    
-    // Valid invite - update profile with invite info
-    await supabase
-      .from('profiles')
-      .update({ 
-        is_invited_user: true,
-        invited_via_ride_id: inviteData.ride_id 
-      })
-      .eq('id', userId);
-    
-    return true;
+    // Check if user was marked as invited during signup
+    return profile.is_invited_user === true && profile.invited_via_ride_id !== null;
   };
 
   const fetchProfile = async (userId: string) => {
@@ -182,42 +157,41 @@ const Onboarding = () => {
       return;
     }
     
-    // Smart routing: Priority 1 - Check for upcoming rides
-    const { data: upcomingRides } = await supabase
-      .from('ride_members')
-      .select(`
-        ride_id,
-        ride_groups!inner(
-          id,
-          departure_time
-        )
-      `)
-      .eq('user_id', profile.id)
-      .gte('ride_groups.departure_time', new Date().toISOString())
-      .limit(1);
-    
-    // If has upcoming rides, go to My Rides page
-    if (upcomingRides && upcomingRides.length > 0) {
-      navigate('/my-rides');
-      return;
-    }
-    
-    // Priority 2 - Check for invited event (only if no upcoming rides)
-    if (profile.is_invited_user && profile.invited_via_ride_id) {
-      const { data } = await supabase
-        .from('ride_groups')
-        .select('event_id')
-        .eq('id', profile.invited_via_ride_id)
-        .single();
+    try {
+      // Check if external user
+      const isExternalUser = !profile.email?.toLowerCase().endsWith('@berkeley.edu');
       
-      if (data?.event_id) {
-        navigate(`/events/${data.event_id}`);
+      // Priority 1 - Check for upcoming rides
+      const { data: upcomingRides } = await supabase
+        .from('ride_members')
+        .select(`
+          ride_id,
+          ride_groups!inner(
+            id,
+            departure_time
+          )
+        `)
+        .eq('user_id', profile.id)
+        .gte('ride_groups.departure_time', new Date().toISOString())
+        .limit(1);
+      
+      if (upcomingRides && upcomingRides.length > 0) {
+        navigate('/my-rides');
         return;
       }
+      
+      // Priority 2 - External users always go to My Rides
+      if (isExternalUser) {
+        navigate('/my-rides');
+        return;
+      }
+      
+      // Priority 3 - Berkeley users go to Events
+      navigate("/events");
+    } catch (error) {
+      console.error('Error determining route:', error);
+      navigate("/my-rides");
     }
-    
-    // Priority 3 - Default to Events page
-    navigate("/events");
   };
 
   if (!profile) {
