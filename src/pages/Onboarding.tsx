@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Upload, User } from "lucide-react";
 import { PhotoEditorDialog } from "@/components/PhotoEditorDialog";
+import berkeleyLogo from "@/assets/berkeley-rides-logo.png";
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -230,7 +231,13 @@ const Onboarding = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-4">
+          <img 
+            src={berkeleyLogo} 
+            alt="Berkeley Rides" 
+            className="w-[80px] h-auto mx-auto"
+            loading="eager"
+          />
           <h1 className="text-4xl font-bold text-primary">Welcome to Berkeley Rides</h1>
           <p className="text-muted-foreground">One last step - add your profile photo</p>
         </div>

@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Calendar, Car, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import berkeleyLogo from "@/assets/berkeley-rides-logo.png";
 
 export const Navigation = () => {
   const location = useLocation();
@@ -14,6 +15,12 @@ export const Navigation = () => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-primary text-primary-foreground border-t border-primary/20">
       <div className="container mx-auto max-w-4xl">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-primary/20">
+          <div className="flex items-center gap-2">
+            <img src={berkeleyLogo} alt="Berkeley Rides" className="h-8 w-auto" />
+            <span className="font-semibold text-sm">Berkeley Rides</span>
+          </div>
+        </div>
         <div className="flex items-center justify-around py-3">
           {links.map(({ href, icon: Icon, label }) => {
             const isActive = location.pathname === href;

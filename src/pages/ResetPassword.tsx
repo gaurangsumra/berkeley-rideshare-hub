@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Lock } from "lucide-react";
 import campanileImage from "@/assets/campanile-bay.jpg";
+import berkeleyLogo from "@/assets/berkeley-rides-logo.png";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -146,7 +147,12 @@ const ResetPassword = () => {
         </Card>
 
         <div className="mt-12 text-center">
-          <p className="text-white/60 text-sm">Berkeley Rides Logo Coming Soon</p>
+          <img 
+            src={berkeleyLogo} 
+            alt="Berkeley Rides" 
+            className="w-[120px] h-auto mx-auto drop-shadow-lg"
+            loading="eager"
+          />
         </div>
       </div>
     </div>

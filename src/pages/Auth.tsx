@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Check, MapPin, Wallet } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import campanileImage from "@/assets/campanile-bay.jpg";
+import berkeleyLogo from "@/assets/berkeley-rides-logo.png";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -525,9 +526,13 @@ const Auth = () => {
           </CardContent>
         </Card>
         
-        {/* Logo placeholder - will be replaced when logo is provided */}
         <div className="mt-8 text-center">
-          <p className="text-white/60 text-sm">Berkeley Rides Logo Coming Soon</p>
+          <img 
+            src={berkeleyLogo} 
+            alt="Berkeley Rides" 
+            className="w-[120px] h-auto mx-auto drop-shadow-lg"
+            loading="eager"
+          />
         </div>
       </div>
 
