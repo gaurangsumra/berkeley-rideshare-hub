@@ -248,28 +248,13 @@ const Onboarding = () => {
         if (inviteToken && inviteToProcess) {
           const joined = await processInviteJoin();
           if (joined) {
-            // Get event_id - use passed-in details first
-            let eventId = inviteToProcess.ride_groups?.event_id;
-            
-            // Fallback: if event_id is missing, fetch it directly
-            if (!eventId && inviteToProcess.ride_id) {
-              console.log('Event ID missing from invite details, fetching directly...');
-              const { data: rideData } = await supabase
-                .from('ride_groups')
-                .select('event_id')
-                .eq('id', inviteToProcess.ride_id)
-                .single();
-              
-              eventId = rideData?.event_id;
-              console.log('Fetched event_id:', eventId);
-            }
-            
-            if (eventId) {
-              console.log('Redirecting to event:', eventId);
-              navigate(`/events/${eventId}`);
+            // Redirect directly to the ride they were invited to
+            if (inviteToProcess.ride_id) {
+              console.log('Redirecting to ride:', inviteToProcess.ride_id);
+              navigate(`/rides/${inviteToProcess.ride_id}`);
               return;
             } else {
-              console.error('Could not determine event_id for redirect');
+              console.error('Could not determine ride_id for redirect');
               navigate("/my-rides");
               return;
             }
