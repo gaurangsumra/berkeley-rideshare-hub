@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 interface CreateRideDialogProps {
@@ -41,7 +41,8 @@ export const CreateRideDialog = ({
   const [formData, setFormData] = useState({
     date: eventDate ? new Date(eventDate).toISOString().split('T')[0] : "",
     time: eventDate ? calculateDefaultTime(eventDate) : "",
-    travelMode: "Rideshare (Uber/Lyft)",
+    rideshare: false,
+    carpool: false,
     maxCapacity: 3,
     minCapacity: 1,
   });
@@ -52,7 +53,8 @@ export const CreateRideDialog = ({
       setFormData({
         date: new Date(eventDate).toISOString().split('T')[0],
         time: calculateDefaultTime(eventDate),
-        travelMode: "Rideshare (Uber/Lyft)",
+        rideshare: false,
+        carpool: false,
         maxCapacity: 3,
         minCapacity: 1,
       });
@@ -67,50 +69,74 @@ export const CreateRideDialog = ({
       return;
     }
 
+    if (!formData.rideshare && !formData.carpool) {
+      toast.error("Please select at least one travel option");
+      return;
+    }
+
     try {
       setLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
       const departureTime = new Date(`${formData.date}T${formData.time}`).toISOString();
-      const isCarpool = formData.travelMode === 'Carpool (Student Driver)';
-      const totalCapacity = isCarpool ? formData.maxCapacity + 1 : 4; // +1 for driver in carpool
+      const rideGroupsToCreate = [];
 
-      const { data: rideGroup, error: rideError } = await supabase
-        .from('ride_groups')
-        .insert({
+      if (formData.rideshare) {
+        rideGroupsToCreate.push({
           event_id: eventId,
           departure_time: departureTime,
-          travel_mode: formData.travelMode,
-          capacity: totalCapacity,
-          min_capacity: isCarpool ? formData.minCapacity : 1,
+          travel_mode: "Rideshare (Uber/Lyft)",
+          capacity: 4,
+          min_capacity: 1,
           created_by: session.user.id,
-        })
-        .select()
-        .single();
+        });
+      }
+
+      if (formData.carpool) {
+        rideGroupsToCreate.push({
+          event_id: eventId,
+          departure_time: departureTime,
+          travel_mode: "Carpool (Student Driver)",
+          capacity: formData.maxCapacity + 1,
+          min_capacity: formData.minCapacity,
+          created_by: session.user.id,
+        });
+      }
+
+      const { data: rideGroups, error: rideError } = await supabase
+        .from('ride_groups')
+        .insert(rideGroupsToCreate)
+        .select();
 
       if (rideError) throw rideError;
 
-      const role = formData.travelMode === 'Carpool (Student Driver)' ? 'driver' : null;
-      
+      // Add user as member to all created ride groups
+      const memberInserts = rideGroups.map((rg) => ({
+        ride_id: rg.id,
+        user_id: session.user.id,
+        status: 'joined',
+        role: rg.travel_mode === 'Carpool (Student Driver)' ? 'driver' : null,
+      }));
+
       const { error: memberError } = await supabase
         .from('ride_members')
-        .insert({
-          ride_id: rideGroup.id,
-          user_id: session.user.id,
-          status: 'joined',
-          role: role,
-        });
+        .insert(memberInserts);
 
       if (memberError) throw memberError;
 
-      toast.success("Ride group created successfully!");
+      const message = rideGroups.length > 1 
+        ? "Ride groups created successfully!" 
+        : "Ride group created successfully!";
+      toast.success(message);
+      
       onOpenChange(false);
       onRideCreated();
       setFormData({ 
         date: "", 
         time: "", 
-        travelMode: "Rideshare (Uber/Lyft)",
+        rideshare: false,
+        carpool: false,
         maxCapacity: 3,
         minCapacity: 1,
       });
@@ -156,15 +182,15 @@ export const CreateRideDialog = ({
           </div>
 
           <div>
-            <Label>Travel Mode *</Label>
-            <RadioGroup
-              value={formData.travelMode}
-              onValueChange={(value) => setFormData({ ...formData, travelMode: value })}
-              className="mt-2 space-y-3"
-            >
+            <Label>Travel Options * (select at least one)</Label>
+            <div className="mt-2 space-y-3">
               <div className="space-y-1">
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="Rideshare (Uber/Lyft)" id="rideshare" />
+                  <Checkbox 
+                    id="rideshare" 
+                    checked={formData.rideshare}
+                    onCheckedChange={(checked) => setFormData({ ...formData, rideshare: checked as boolean })}
+                  />
                   <Label htmlFor="rideshare" className="font-normal cursor-pointer">
                     Rideshare (Splitting an Uber/Lyft)
                   </Label>
@@ -175,21 +201,25 @@ export const CreateRideDialog = ({
               </div>
               <div className="space-y-1">
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="Carpool (Student Driver)" id="carpool" />
+                  <Checkbox 
+                    id="carpool" 
+                    checked={formData.carpool}
+                    onCheckedChange={(checked) => setFormData({ ...formData, carpool: checked as boolean })}
+                  />
                   <Label htmlFor="carpool" className="font-normal cursor-pointer">
-                    Carpool (Student Driver Needed)
+                    Carpool (Student Driver)
                   </Label>
                 </div>
                 <p className="text-xs text-muted-foreground ml-6">
-                  {formData.travelMode === 'Carpool (Student Driver)' 
+                  {formData.carpool 
                     ? "✓ You'll be the driver for this ride" 
                     : "You'll drive your car and offer rides"}
                 </p>
               </div>
-            </RadioGroup>
+            </div>
           </div>
 
-          {formData.travelMode === 'Carpool (Student Driver)' && (
+          {formData.carpool && (
             <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
               <div>
                 <Label htmlFor="maxCapacity">Maximum Passengers (excluding driver)</Label>
