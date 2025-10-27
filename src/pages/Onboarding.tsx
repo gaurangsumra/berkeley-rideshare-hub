@@ -32,14 +32,15 @@ const Onboarding = () => {
         return;
       }
 
-      // Step 2: If invite token exists, validate it FIRST and WAIT for completion
+      // Step 2: If invite token exists, validate it FIRST and get the details
+      let inviteData = null;
       if (token) {
         setInviteToken(token);
-        await validateAndFetchInvite(token);
+        inviteData = await validateAndFetchInvite(token);
       }
 
-      // Step 3: Only after invite details are loaded, fetch profile
-      fetchProfile(session.user.id);
+      // Step 3: Pass invite data directly to fetchProfile
+      fetchProfile(session.user.id, inviteData);
     };
 
     initializeOnboarding();
@@ -58,21 +59,21 @@ const Onboarding = () => {
         console.error('Invite not found:', inviteError);
         toast.error("Invalid invite link");
         navigate('/auth');
-        return;
+        return null;
       }
 
       // Check if invite is expired
       if (new Date(invite.expires_at) < new Date()) {
         toast.error("This invite link has expired");
         navigate('/auth');
-        return;
+        return null;
       }
 
       // Check if invite has reached max uses
       if (invite.max_uses && invite.use_count >= invite.max_uses) {
         toast.error("This invite link has been fully used");
         navigate('/auth');
-        return;
+        return null;
       }
 
       // Separately fetch ride and event details (public data)
@@ -86,7 +87,7 @@ const Onboarding = () => {
       if (rideGroup && new Date(rideGroup.departure_time) < new Date()) {
         toast.error("This ride has already departed");
         navigate('/auth');
-        return;
+        return null;
       }
 
       // Combine the data for display
@@ -98,10 +99,12 @@ const Onboarding = () => {
       setInviteDetails(inviteWithDetails);
       console.log('Invite validated successfully:', inviteWithDetails);
       console.log('Event ID from invite:', rideGroup?.event_id);
+      return inviteWithDetails;
     } catch (error) {
       console.error('Error validating invite:', error);
       toast.error("Failed to validate invite link");
       navigate('/auth');
+      return null;
     }
   };
 
@@ -213,7 +216,7 @@ const Onboarding = () => {
     }
   };
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, currentInviteDetails?: any) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -240,20 +243,21 @@ const Onboarding = () => {
 
       // If user already has a photo, onboarding is complete
       if (data.photo) {
-        // If there's an invite token, process it immediately
-        if (inviteToken && inviteDetails) {
+        // If there's an invite token, process it immediately using passed-in details
+        const inviteToProcess = currentInviteDetails || inviteDetails;
+        if (inviteToken && inviteToProcess) {
           const joined = await processInviteJoin();
           if (joined) {
-            // Get event_id - either from inviteDetails or fetch directly
-            let eventId = inviteDetails.ride_groups?.event_id;
+            // Get event_id - use passed-in details first
+            let eventId = inviteToProcess.ride_groups?.event_id;
             
             // Fallback: if event_id is missing, fetch it directly
-            if (!eventId && inviteDetails.ride_id) {
-              console.log('Event ID missing from inviteDetails, fetching directly...');
+            if (!eventId && inviteToProcess.ride_id) {
+              console.log('Event ID missing from invite details, fetching directly...');
               const { data: rideData } = await supabase
                 .from('ride_groups')
                 .select('event_id')
-                .eq('id', inviteDetails.ride_id)
+                .eq('id', inviteToProcess.ride_id)
                 .single();
               
               eventId = rideData?.event_id;
