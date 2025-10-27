@@ -97,6 +97,7 @@ const Onboarding = () => {
 
       setInviteDetails(inviteWithDetails);
       console.log('Invite validated successfully:', inviteWithDetails);
+      console.log('Event ID from invite:', rideGroup?.event_id);
     } catch (error) {
       console.error('Error validating invite:', error);
       toast.error("Failed to validate invite link");
@@ -242,12 +243,32 @@ const Onboarding = () => {
         // If there's an invite token, process it immediately
         if (inviteToken && inviteDetails) {
           const joined = await processInviteJoin();
-          if (joined && inviteDetails.ride_groups?.event_id) {
-            navigate(`/events/${inviteDetails.ride_groups.event_id}`);
-            return;
-          } else if (joined) {
-            navigate("/my-rides");
-            return;
+          if (joined) {
+            // Get event_id - either from inviteDetails or fetch directly
+            let eventId = inviteDetails.ride_groups?.event_id;
+            
+            // Fallback: if event_id is missing, fetch it directly
+            if (!eventId && inviteDetails.ride_id) {
+              console.log('Event ID missing from inviteDetails, fetching directly...');
+              const { data: rideData } = await supabase
+                .from('ride_groups')
+                .select('event_id')
+                .eq('id', inviteDetails.ride_id)
+                .single();
+              
+              eventId = rideData?.event_id;
+              console.log('Fetched event_id:', eventId);
+            }
+            
+            if (eventId) {
+              console.log('Redirecting to event:', eventId);
+              navigate(`/events/${eventId}`);
+              return;
+            } else {
+              console.error('Could not determine event_id for redirect');
+              navigate("/my-rides");
+              return;
+            }
           }
         }
         
@@ -336,10 +357,23 @@ const Onboarding = () => {
       // Process invite token if present
       if (inviteToken && inviteDetails) {
         const joined = await processInviteJoin();
-        if (joined && inviteDetails.ride_groups?.event_id) {
-          navigate(`/events/${inviteDetails.ride_groups.event_id}`);
-        } else if (joined) {
-          navigate('/my-rides');
+        if (joined) {
+          let eventId = inviteDetails.ride_groups?.event_id;
+          
+          if (!eventId && inviteDetails.ride_id) {
+            const { data: rideData } = await supabase
+              .from('ride_groups')
+              .select('event_id')
+              .eq('id', inviteDetails.ride_id)
+              .single();
+            eventId = rideData?.event_id;
+          }
+          
+          if (eventId) {
+            navigate(`/events/${eventId}`);
+          } else {
+            navigate('/my-rides');
+          }
         }
         return;
       }
