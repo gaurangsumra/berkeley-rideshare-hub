@@ -187,14 +187,34 @@ ${inviteLink ? `🔗 Join this ride:\n${inviteLink}\n\n` : ''}Shared for safety 
                 ))}
               </div>
             </div>
+
+            {loadingLink ? (
+              <div className="pt-2 border-t">
+                <p className="text-sm text-muted-foreground">Generating invite link...</p>
+              </div>
+            ) : inviteLink ? (
+              <div className="pt-2 border-t">
+                <p className="text-xs font-medium mb-1">Invite Link:</p>
+                <p className="text-xs text-muted-foreground break-all">{inviteLink}</p>
+              </div>
+            ) : null}
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={handleCopyText} variant="outline" className="flex-1">
+            <Button 
+              onClick={handleCopyText} 
+              variant="outline" 
+              className="flex-1"
+              disabled={loadingLink}
+            >
               <Copy className="h-4 w-4 mr-2" />
               Copy Text
             </Button>
-            <Button onClick={handleShare} className="flex-1">
+            <Button 
+              onClick={handleShare} 
+              className="flex-1"
+              disabled={loadingLink}
+            >
               <Share2 className="h-4 w-4 mr-2" />
               Share
             </Button>
