@@ -20,22 +20,29 @@ const Onboarding = () => {
   const [inviteDetails, setInviteDetails] = useState<any>(null);
 
   useEffect(() => {
-    // Extract invite token from URL
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('invite');
-    if (token) {
-      setInviteToken(token);
-      validateAndFetchInvite(token);
-    }
-
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    const initializeOnboarding = async () => {
+      // Extract invite token from URL
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('invite');
+      
+      // Step 1: Get session first
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate("/auth");
         return;
       }
 
+      // Step 2: If invite token exists, validate it FIRST and WAIT for completion
+      if (token) {
+        setInviteToken(token);
+        await validateAndFetchInvite(token);
+      }
+
+      // Step 3: Only after invite details are loaded, fetch profile
       fetchProfile(session.user.id);
-    });
+    };
+
+    initializeOnboarding();
   }, [navigate]);
 
   const validateAndFetchInvite = async (token: string) => {
