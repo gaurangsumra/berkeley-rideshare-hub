@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, MapPin, Clock } from "lucide-react";
+import { Calendar, MapPin, Clock, Users } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { EventComments } from "./EventComments";
@@ -13,6 +13,7 @@ interface Event {
   city: string;
   description: string | null;
   ride_group_count?: number;
+  member_count?: number;
 }
 
 interface EventCardProps {
@@ -30,11 +31,19 @@ export const EventCard = ({ event }: EventCardProps) => {
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-3">
           <h3 className="text-xl font-semibold text-primary">{event.name}</h3>
-          {event.ride_group_count !== undefined && (
-            <Badge variant="secondary" className="ml-2 shrink-0">
-              {event.ride_group_count} {event.ride_group_count === 1 ? 'group' : 'groups'}
-            </Badge>
-          )}
+          <div className="flex gap-2 shrink-0">
+            {event.member_count !== undefined && event.member_count > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                <Users className="w-3 h-3 mr-1" />
+                {event.member_count} {event.member_count === 1 ? 'member' : 'members'}
+              </Badge>
+            )}
+            {event.ride_group_count !== undefined && event.ride_group_count > 0 && (
+              <Badge variant="outline">
+                {event.ride_group_count} {event.ride_group_count === 1 ? 'group' : 'groups'}
+              </Badge>
+            )}
+          </div>
         </div>
         
         <div className="space-y-2 text-sm">

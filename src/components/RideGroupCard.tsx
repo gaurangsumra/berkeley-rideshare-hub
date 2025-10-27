@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Clock, Users, MapPin, UserPlus, Trash2, MessageCircle, Share2 } from "lucide-react";
+import { Clock, Users, MapPin, UserPlus, Trash2, MessageCircle, Share2, CheckCircle } from "lucide-react";
 import { RideGroupChat } from "@/components/RideGroupChat";
 import { CapacityVisualization } from "@/components/CapacityVisualization";
 import { ShareRideDetails } from "@/components/ShareRideDetails";
@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { MeetingPointVoting } from "@/components/MeetingPointVoting";
 import { UberPaymentDialog } from "@/components/UberPaymentDialog";
 import { InviteDialog } from "@/components/InviteDialog";
+import { AttendanceSurveyDialog } from "@/components/AttendanceSurveyDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,6 +68,8 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
   const [leaderMeetingPoint, setLeaderMeetingPoint] = useState<string | null>(null);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [showAttendanceDialog, setShowAttendanceDialog] = useState(false);
 
   const isMember = currentUserId && rideGroup.ride_members.some(m => m.user_id === currentUserId);
   const isDriver = currentUserId && rideGroup.ride_members.some(m => m.user_id === currentUserId && m.role === 'driver');
@@ -513,6 +516,13 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
                   Split Cost
                 </Button>
               )}
+              <Button
+                onClick={() => setShowCompleteDialog(true)}
+                variant="secondary"
+                title="Manually complete ride and submit attendance"
+              >
+                <CheckCircle className="w-4 h-4" />
+              </Button>
             </>
           )}
         </div>
@@ -613,6 +623,38 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete Ride?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will open the attendance survey where you can confirm who attended the ride. 
+              This is typically done automatically 24 hours after the ride, but you can complete it manually now.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowCompleteDialog(false);
+                setShowAttendanceDialog(true);
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {isMember && (
+        <AttendanceSurveyDialog
+          open={showAttendanceDialog}
+          onOpenChange={setShowAttendanceDialog}
+          rideId={rideGroup.id}
+          eventName={event.name}
+        />
+      )}
     </Card>
   );
 };

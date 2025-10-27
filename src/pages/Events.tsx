@@ -30,6 +30,7 @@ interface Event {
   description: string | null;
   created_by: string;
   ride_group_count?: number;
+  member_count?: number;
 }
 
 const Events = () => {
@@ -100,19 +101,23 @@ const Events = () => {
         // Fetch counts separately for search results
         const eventIds = data?.map(e => e.id) || [];
         if (eventIds.length > 0) {
-          const { data: counts } = await supabase
+          const { data: rideGroups } = await supabase
             .from('ride_groups')
-            .select('event_id')
+            .select('event_id, ride_members(count)')
             .in('event_id', eventIds);
           
-          const countMap = counts?.reduce((acc, rg) => {
-            acc[rg.event_id] = (acc[rg.event_id] || 0) + 1;
-            return acc;
-          }, {} as Record<string, number>) || {};
+          const groupCountMap: Record<string, number> = {};
+          const memberCountMap: Record<string, number> = {};
+          
+          rideGroups?.forEach(rg => {
+            groupCountMap[rg.event_id] = (groupCountMap[rg.event_id] || 0) + 1;
+            memberCountMap[rg.event_id] = (memberCountMap[rg.event_id] || 0) + (rg.ride_members?.[0]?.count || 0);
+          });
           
           const eventsWithCounts = data?.map(e => ({
             ...e,
-            ride_group_count: countMap[e.id] || 0
+            ride_group_count: groupCountMap[e.id] || 0,
+            member_count: memberCountMap[e.id] || 0
           })) || [];
           
           setEvents(eventsWithCounts);
@@ -132,19 +137,23 @@ const Events = () => {
         // Fetch counts for all events
         const eventIds = data?.map(e => e.id) || [];
         if (eventIds.length > 0) {
-          const { data: counts } = await supabase
+          const { data: rideGroups } = await supabase
             .from('ride_groups')
-            .select('event_id')
+            .select('event_id, ride_members(count)')
             .in('event_id', eventIds);
           
-          const countMap = counts?.reduce((acc, rg) => {
-            acc[rg.event_id] = (acc[rg.event_id] || 0) + 1;
-            return acc;
-          }, {} as Record<string, number>) || {};
+          const groupCountMap: Record<string, number> = {};
+          const memberCountMap: Record<string, number> = {};
+          
+          rideGroups?.forEach(rg => {
+            groupCountMap[rg.event_id] = (groupCountMap[rg.event_id] || 0) + 1;
+            memberCountMap[rg.event_id] = (memberCountMap[rg.event_id] || 0) + (rg.ride_members?.[0]?.count || 0);
+          });
           
           const eventsWithCounts = data?.map(e => ({
             ...e,
-            ride_group_count: countMap[e.id] || 0
+            ride_group_count: groupCountMap[e.id] || 0,
+            member_count: memberCountMap[e.id] || 0
           })) || [];
           
           setEvents(eventsWithCounts);
@@ -179,19 +188,23 @@ const Events = () => {
       // Fetch counts
       const eventIds = data?.map(e => e.id) || [];
       if (eventIds.length > 0) {
-        const { data: counts } = await supabase
+        const { data: rideGroups } = await supabase
           .from('ride_groups')
-          .select('event_id')
+          .select('event_id, ride_members(count)')
           .in('event_id', eventIds);
         
-        const countMap = counts?.reduce((acc, rg) => {
-          acc[rg.event_id] = (acc[rg.event_id] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>) || {};
+        const groupCountMap: Record<string, number> = {};
+        const memberCountMap: Record<string, number> = {};
+        
+        rideGroups?.forEach(rg => {
+          groupCountMap[rg.event_id] = (groupCountMap[rg.event_id] || 0) + 1;
+          memberCountMap[rg.event_id] = (memberCountMap[rg.event_id] || 0) + (rg.ride_members?.[0]?.count || 0);
+        });
         
         const eventsWithCounts = data?.map(e => ({
           ...e,
-          ride_group_count: countMap[e.id] || 0
+          ride_group_count: groupCountMap[e.id] || 0,
+          member_count: memberCountMap[e.id] || 0
         })) || [];
         
         setEvents(eventsWithCounts);
