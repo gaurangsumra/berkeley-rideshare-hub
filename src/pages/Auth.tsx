@@ -28,8 +28,13 @@ const Auth = () => {
   const [sendingReset, setSendingReset] = useState(false);
 
   // Smart routing helper
-  const determinePostLoginRoute = async (userId: string): Promise<string> => {
+  const determinePostLoginRoute = async (userId: string, inviteToken?: string | null): Promise<string> => {
     try {
+      // Priority 1: If invite token exists, always go to onboarding with invite
+      if (inviteToken) {
+        return `/onboarding?invite=${inviteToken}`;
+      }
+      
       // 1. Check if onboarding is complete (has photo)
       const { data: profile } = await supabase
         .from('profiles')
@@ -82,14 +87,14 @@ const Auth = () => {
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
-        const route = await determinePostLoginRoute(session.user.id);
+        const route = await determinePostLoginRoute(session.user.id, inviteToken);
         navigate(route);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        const route = await determinePostLoginRoute(session.user.id);
+        const route = await determinePostLoginRoute(session.user.id, inviteToken);
         navigate(route);
       }
     });
@@ -249,7 +254,7 @@ const Auth = () => {
       
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const route = await determinePostLoginRoute(user.id);
+        const route = await determinePostLoginRoute(user.id, inviteToken);
         toast.success("Signed in successfully!");
         navigate(route);
       }

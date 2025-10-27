@@ -235,7 +235,10 @@ const Onboarding = () => {
         // If there's an invite token, process it immediately
         if (inviteToken && inviteDetails) {
           const joined = await processInviteJoin();
-          if (joined) {
+          if (joined && inviteDetails.ride_groups?.event_id) {
+            navigate(`/events/${inviteDetails.ride_groups.event_id}`);
+            return;
+          } else if (joined) {
             navigate("/my-rides");
             return;
           }
@@ -326,7 +329,11 @@ const Onboarding = () => {
       // Process invite token if present
       if (inviteToken && inviteDetails) {
         const joined = await processInviteJoin();
-        navigate('/my-rides');
+        if (joined && inviteDetails.ride_groups?.event_id) {
+          navigate(`/events/${inviteDetails.ride_groups.event_id}`);
+        } else if (joined) {
+          navigate('/my-rides');
+        }
         return;
       }
 
