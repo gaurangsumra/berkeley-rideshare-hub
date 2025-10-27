@@ -10,6 +10,9 @@ import Events from "./pages/Events";
 import MyRides from "./pages/MyRides";
 import Profile from "./pages/Profile";
 import EventDetail from "./pages/EventDetail";
+import RideDetail from "./pages/RideDetail";
+import UserProfile from "./pages/UserProfile";
+import Notifications from "./pages/Notifications";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
@@ -27,6 +30,9 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/events" element={<Events />} />
           <Route path="/events/:eventId" element={<EventDetail />} />
+          <Route path="/rides/:rideId" element={<RideDetail />} />
+          <Route path="/users/:userId" element={<UserProfile />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/my-rides" element={<MyRides />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/reset-password" element={<ResetPassword />} />

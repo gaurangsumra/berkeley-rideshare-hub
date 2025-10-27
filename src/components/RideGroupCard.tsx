@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -427,13 +428,10 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
           </p>
           <div className="space-y-2">
             {members.filter(m => !isCarpool || m.id !== driver?.id).map((member) => (
-              <div 
-                key={member.id} 
+              <Link
+                key={member.id}
+                to={`/users/${member.id}`}
                 className="flex items-center gap-3 cursor-pointer hover:bg-accent/50 p-2 rounded-lg transition-colors"
-                onClick={() => {
-                  setSelectedProfile(member.id);
-                  setShowProfileDialog(true);
-                }}
               >
                 <Avatar className="w-8 h-8">
                   <AvatarImage src={member.photo || undefined} />
@@ -448,7 +446,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
                   </div>
                   <p className="text-xs text-muted-foreground">{member.program}</p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
