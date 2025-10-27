@@ -98,7 +98,7 @@ ${driver ? `👤 Driver: ${driver.name}` : ''}
 👥 Ride Members (${members.length}):
 ${memberNames}
 
-${inviteLink ? `🔗 Join this ride:\n${inviteLink}\n\n` : ''}Shared for safety purposes from Berkeley Rides`;
+${inviteLink ? `🔗 Join this ride:\n${inviteLink}` : ''}`;
   };
 
   const handleCopyText = () => {
