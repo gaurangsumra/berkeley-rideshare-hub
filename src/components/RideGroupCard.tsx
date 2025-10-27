@@ -566,6 +566,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
 
       {isMember && (
         <ShareRideDetails
+          rideId={rideGroup.id}
           event={event}
           ride={rideGroup}
           members={members}

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Share2, Copy, Download } from "lucide-react";
+import { Share2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Profile {
   id: string;
@@ -14,6 +15,7 @@ interface Profile {
 }
 
 interface ShareRideDetailsProps {
+  rideId: string;
   event: {
     name: string;
     destination: string;
@@ -30,13 +32,56 @@ interface ShareRideDetailsProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-export const ShareRideDetails = ({ event, ride, members, driver, open: externalOpen, onOpenChange }: ShareRideDetailsProps) => {
+export const ShareRideDetails = ({ rideId, event, ride, members, driver, open: externalOpen, onOpenChange }: ShareRideDetailsProps) => {
   const [internalOpen, setInternalOpen] = useState(false);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [loadingLink, setLoadingLink] = useState(false);
   const { toast } = useToast();
   
   // Use external control if provided, otherwise use internal state
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
+
+  const generateInviteLink = async () => {
+    try {
+      setLoadingLink(true);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error("User not authenticated");
+        return;
+      }
+
+      const url = `https://rizftvjircbgfsamrvdf.functions.supabase.co/send-ride-invite`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ 
+          rideId,
+          linkOnly: true
+        }),
+      });
+
+      const data = await res.json();
+      if (data?.inviteLink) {
+        setInviteLink(data.inviteLink);
+      }
+    } catch (error) {
+      console.error('Failed to generate invite link:', error);
+    } finally {
+      setLoadingLink(false);
+    }
+  };
+
+  useEffect(() => {
+    if (open && !inviteLink) {
+      generateInviteLink();
+    }
+  }, [open]);
 
   const generateShareText = () => {
     const departureTime = format(new Date(ride.departure_time), "EEEE, MMMM d 'at' h:mm a");
@@ -53,7 +98,7 @@ ${driver ? `👤 Driver: ${driver.name}` : ''}
 👥 Ride Members (${members.length}):
 ${memberNames}
 
-Shared for safety purposes from Berkeley Rides`;
+${inviteLink ? `🔗 Join this ride:\n${inviteLink}\n\n` : ''}Shared for safety purposes from Berkeley Rides`;
   };
 
   const handleCopyText = () => {
