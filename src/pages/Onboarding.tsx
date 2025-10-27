@@ -261,6 +261,13 @@ const Onboarding = () => {
           }
         }
         
+        // If invite token exists but details not loaded yet, redirect to my-rides
+        if (inviteToken) {
+          console.log('Invite token exists but details not loaded, redirecting to my-rides');
+          navigate("/my-rides");
+          return;
+        }
+        
         // Otherwise redirect appropriately
         if (isExternal) {
           navigate("/my-rides");
