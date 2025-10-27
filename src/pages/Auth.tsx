@@ -75,26 +75,27 @@ const Auth = () => {
   };
 
   useEffect(() => {
-    // Check for invite token in URL
+    // Parse invite token from URL once and use consistently
     const params = new URLSearchParams(window.location.search);
     const token = params.get('invite');
     
     if (token) {
       setInviteToken(token);
-      // Validate invite token and get ride info
       validateInviteToken(token);
     }
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
-        const route = await determinePostLoginRoute(session.user.id, inviteToken);
+        const route = await determinePostLoginRoute(session.user.id, token);
+        console.log('Auth routing on getSession with token:', token, 'to:', route);
         navigate(route);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        const route = await determinePostLoginRoute(session.user.id, inviteToken);
+        const route = await determinePostLoginRoute(session.user.id, token);
+        console.log('Auth routing on SIGNED_IN with token:', token, 'to:', route);
         navigate(route);
       }
     });
@@ -254,7 +255,9 @@ const Auth = () => {
       
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const route = await determinePostLoginRoute(user.id, inviteToken);
+        const urlToken = new URLSearchParams(window.location.search).get('invite');
+        const route = await determinePostLoginRoute(user.id, urlToken);
+        console.log('Email sign-in routing with token:', urlToken, 'to:', route);
         toast.success("Signed in successfully!");
         navigate(route);
       }
