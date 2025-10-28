@@ -96,6 +96,13 @@ export const NotificationBell = () => {
         toast.info('Please add your Venmo username to your profile');
         break;
       
+      case 'new_chat_message':
+        // Navigate to ride detail and open chat
+        if (notification.ride_id) {
+          navigate(`/rides/${notification.ride_id}?openChat=true`);
+        }
+        break;
+      
       default:
         // Default: navigate to event detail if ride_id exists
         if (notification.ride_id) {

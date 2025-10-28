@@ -86,6 +86,16 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
     fetchMembers();
   }, [rideGroup.id]);
 
+  // Auto-open chat if openChat query parameter is present
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('openChat') === 'true' && isMember) {
+      setShowChat(true);
+      // Clean up the URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [isMember]);
+
   // Keep leader in sync with votes (realtime)
   useEffect(() => {
     fetchLeader();

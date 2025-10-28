@@ -147,6 +147,7 @@ const handler = async (req: Request): Promise<Response> => {
           <p><strong>${actorName}</strong> sent a message in your ride group to <strong>${finalEventName}</strong>.</p>
           <p><em>"${messagePreview}"</em></p>
           <p><strong>Departure:</strong> ${departureDate}</p>
+          <p><a href="${supabaseUrl.replace('/rest/v1', '')}/rides/${rideId}?openChat=true" style="display: inline-block; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0;">View Chat</a></p>
           <p>Log in to view the full conversation and respond.</p>
         `;
         break;

@@ -11,6 +11,7 @@ import { EditEventDialog } from "@/components/EditEventDialog";
 import { EventHero } from "@/components/EventHero";
 import { useUserRole } from "@/hooks/useUserRole";
 import { getTimeWindow, sortTimeWindows } from "@/lib/timeUtils";
+import { Navigation } from "@/components/Navigation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -165,6 +166,8 @@ const EventDetail = () => {
 
   return (
     <div className="min-h-screen bg-background pb-8">
+      <Navigation />
+      
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         <Button
           variant="ghost"

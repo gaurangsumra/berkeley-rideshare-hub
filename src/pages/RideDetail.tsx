@@ -171,6 +171,16 @@ const RideDetail = () => {
     }
   };
 
+  // Auto-open chat if openChat query parameter is present
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('openChat') === 'true' && currentUserId && members.some(m => m.id === currentUserId)) {
+      setShowChat(true);
+      // Clean up the URL
+      window.history.replaceState({}, '', `/rides/${rideId}`);
+    }
+  }, [members, currentUserId, rideId]);
+
   const fetchLeaderMeetingPoint = async () => {
     if (!rideId) return;
 

@@ -128,6 +128,8 @@ const Notifications = () => {
     // Navigate based on notification type
     if (notification.type === 'payment_amount_entered' || notification.type === 'venmo_required') {
       navigate('/my-rides');
+    } else if (notification.type === 'new_chat_message' && notification.ride_id) {
+      navigate(`/rides/${notification.ride_id}?openChat=true`);
     } else if (notification.ride_id) {
       // First try to get the ride's event_id
       const { data: rideData } = await supabase
