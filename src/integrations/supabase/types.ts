@@ -62,6 +62,57 @@ export type Database = {
           },
         ]
       }
+      email_notification_logs: {
+        Row: {
+          error_message: string | null
+          failed_recipients: string[] | null
+          id: string
+          message_id: string | null
+          notification_type: string
+          recipient_emails: string[]
+          ride_id: string
+          sent_at: string
+          success: boolean
+        }
+        Insert: {
+          error_message?: string | null
+          failed_recipients?: string[] | null
+          id?: string
+          message_id?: string | null
+          notification_type?: string
+          recipient_emails: string[]
+          ride_id: string
+          sent_at?: string
+          success?: boolean
+        }
+        Update: {
+          error_message?: string | null
+          failed_recipients?: string[] | null
+          id?: string
+          message_id?: string | null
+          notification_type?: string
+          recipient_emails?: string[]
+          ride_id?: string
+          sent_at?: string
+          success?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_notification_logs_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "ride_group_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_notification_logs_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "ride_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_access: {
         Row: {
           event_id: string

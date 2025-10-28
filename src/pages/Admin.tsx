@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserDataTable } from "@/components/admin/UserDataTable";
 import { RideMembershipTable } from "@/components/admin/RideMembershipTable";
 import { AnalyticsSummary } from "@/components/admin/AnalyticsSummary";
+import { RideNotificationStats } from "@/components/admin/RideNotificationStats";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield } from "lucide-react";
 
@@ -47,9 +48,10 @@ const Admin = () => {
         <AnalyticsSummary />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="users">User Data</TabsTrigger>
             <TabsTrigger value="rides">Ride Memberships</TabsTrigger>
+            <TabsTrigger value="notifications">Email Notifications</TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="mt-6">
@@ -58,6 +60,10 @@ const Admin = () => {
 
           <TabsContent value="rides" className="mt-6">
             <RideMembershipTable />
+          </TabsContent>
+
+          <TabsContent value="notifications" className="mt-6">
+            <RideNotificationStats />
           </TabsContent>
         </Tabs>
       </div>

@@ -131,13 +131,15 @@ export const RideGroupChat = ({ open, onOpenChange, rideId, rideName }: RideGrou
     setLoading(true);
     const messageText = newMessage.trim();
     
-    const { error } = await supabase
+    const { data: insertedMessage, error } = await supabase
       .from('ride_group_messages')
       .insert({
         ride_id: rideId,
         user_id: session.user.id,
         message: messageText,
-      });
+      })
+      .select()
+      .single();
 
     if (error) {
       toast({ title: "Failed to send message", variant: "destructive" });
@@ -173,6 +175,7 @@ export const RideGroupChat = ({ open, onOpenChange, rideId, rideName }: RideGrou
                 recipientEmails: recipientEmails,
                 actorName: senderProfile?.name || 'Someone',
                 messagePreview: messageText.substring(0, 50) + (messageText.length > 50 ? '...' : ''),
+                messageId: insertedMessage?.id,
               }
             });
 

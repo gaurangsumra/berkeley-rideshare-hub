@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Car, Calendar, TrendingUp } from "lucide-react";
+import { Users, Car, Calendar, TrendingUp, Mail } from "lucide-react";
 
 interface Analytics {
   totalUsers: number;
@@ -10,6 +10,9 @@ interface Analytics {
   totalRides: number;
   totalEvents: number;
   avgRideSize: number;
+  totalEmailsSent: number;
+  emailSuccessRate: number;
+  emailsLast24h: number;
 }
 
 export const AnalyticsSummary = () => {
@@ -20,6 +23,9 @@ export const AnalyticsSummary = () => {
     totalRides: 0,
     totalEvents: 0,
     avgRideSize: 0,
+    totalEmailsSent: 0,
+    emailSuccessRate: 0,
+    emailsLast24h: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -71,6 +77,25 @@ export const AnalyticsSummary = () => {
         ? sizes.reduce((a, b) => a + b, 0) / sizes.length 
         : 0;
 
+      // Email notification stats
+      const { data: emailLogs } = await supabase
+        .from('email_notification_logs')
+        .select('success, sent_at');
+
+      const totalEmailsSent = emailLogs?.length || 0;
+      const successfulEmails = emailLogs?.filter(log => log.success).length || 0;
+      const emailSuccessRate = totalEmailsSent > 0 
+        ? Math.round((successfulEmails / totalEmailsSent) * 100)
+        : 0;
+
+      // Emails in last 24 hours
+      const twentyFourHoursAgo = new Date();
+      twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+      const { count: emailsLast24h } = await supabase
+        .from('email_notification_logs')
+        .select('*', { count: 'exact', head: true })
+        .gte('sent_at', twentyFourHoursAgo.toISOString());
+
       setAnalytics({
         totalUsers: totalUsers || 0,
         berkeleyUsers: berkeleyUsers || 0,
@@ -78,6 +103,9 @@ export const AnalyticsSummary = () => {
         totalRides: totalRides || 0,
         totalEvents: totalEvents || 0,
         avgRideSize: Math.round(avgRideSize * 10) / 10,
+        totalEmailsSent,
+        emailSuccessRate,
+        emailsLast24h: emailsLast24h || 0,
       });
     } catch (error) {
       console.error("Failed to fetch analytics:", error);
@@ -119,10 +147,17 @@ export const AnalyticsSummary = () => {
       icon: TrendingUp,
       color: "text-orange-600",
     },
+    {
+      title: "Email Notifications",
+      value: analytics.totalEmailsSent,
+      subtitle: `${analytics.emailSuccessRate}% success, ${analytics.emailsLast24h} in 24h`,
+      icon: Mail,
+      color: "text-indigo-600",
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       {stats.map((stat) => {
         const Icon = stat.icon;
         return (

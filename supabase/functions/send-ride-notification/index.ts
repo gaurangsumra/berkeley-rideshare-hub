@@ -230,16 +230,45 @@ const handler = async (req: Request): Promise<Response> => {
     const successCount = results.filter((r) => r.status === "fulfilled").length;
     const failureCount = results.filter((r) => r.status === "rejected").length;
     
+    // Collect failed recipients
+    const failedRecipients: string[] = [];
+    let errorMessage = "";
+    
     // Log detailed results
     results.forEach((result, index) => {
       if (result.status === "rejected") {
         console.error(`Failed to send to ${recipientEmails[index]}:`, result.reason);
+        failedRecipients.push(recipientEmails[index]);
+        errorMessage = result.reason?.message || String(result.reason);
       } else {
         console.log(`Successfully sent to ${recipientEmails[index]}`);
       }
     });
 
     console.log(`=== Email send complete: ${successCount} succeeded, ${failureCount} failed ===`);
+
+    // Log to database
+    try {
+      const { error: logError } = await supabase
+        .from('email_notification_logs')
+        .insert({
+          ride_id: rideId,
+          message_id: requestBody.messageId || null,
+          recipient_emails: recipientEmails,
+          notification_type: type,
+          success: failureCount === 0,
+          failed_recipients: failedRecipients.length > 0 ? failedRecipients : null,
+          error_message: errorMessage || null,
+        });
+      
+      if (logError) {
+        console.error("Failed to log email notification:", logError);
+      } else {
+        console.log("Email notification logged to database");
+      }
+    } catch (logErr) {
+      console.error("Error logging notification to database:", logErr);
+    }
 
     return new Response(
       JSON.stringify({
