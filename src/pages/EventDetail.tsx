@@ -165,9 +165,7 @@ const EventDetail = () => {
   const sortedWindows = sortTimeWindows(Object.keys(groupedRides));
 
   return (
-    <div className="min-h-screen bg-background pb-8">
-      <Navigation />
-      
+    <div className="min-h-screen bg-background pb-20 pt-6">
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         <Button
           variant="ghost"
@@ -274,6 +272,8 @@ const EventDetail = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Navigation />
     </div>
   );
 };
