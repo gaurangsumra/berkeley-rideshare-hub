@@ -180,7 +180,8 @@ const MyRides = () => {
             } : undefined,
             events: item.ride_groups.events!
           };
-        }) || [];
+        })
+        .sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()) || [];
 
       setRides(formattedRides);
     } catch (error: any) {
