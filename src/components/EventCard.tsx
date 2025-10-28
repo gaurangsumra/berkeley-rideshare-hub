@@ -18,19 +18,25 @@ interface Event {
 
 interface EventCardProps {
   event: Event;
+  isPastEvent?: boolean;
 }
 
-export const EventCard = ({ event }: EventCardProps) => {
+export const EventCard = ({ event, isPastEvent = false }: EventCardProps) => {
   const navigate = useNavigate();
 
   return (
     <Card 
-      className="cursor-pointer hover:border-accent transition-colors"
+      className={`cursor-pointer hover:border-accent transition-colors ${isPastEvent ? 'opacity-60 grayscale' : ''}`}
       onClick={() => navigate(`/events/${event.id}`)}
     >
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-3">
-          <h3 className="text-xl font-semibold text-primary">{event.name}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-xl font-semibold text-primary">{event.name}</h3>
+            {isPastEvent && (
+              <Badge variant="secondary" className="text-xs">Past Event</Badge>
+            )}
+          </div>
           <div className="flex gap-2 shrink-0">
             {event.member_count !== undefined && event.member_count > 0 && (
               <Badge variant="secondary" className="ml-2">

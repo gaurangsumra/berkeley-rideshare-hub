@@ -125,11 +125,10 @@ const Events = () => {
           setEvents([]);
         }
       } else {
-        // No search term - fetch all upcoming events with ride group counts
+        // No search term - fetch all events with ride group counts
         const { data, error } = await supabase
           .from('events')
           .select('*')
-          .gte('date_time', new Date().toISOString())
           .order('date_time', { ascending: true });
 
         if (error) throw error;
@@ -219,7 +218,13 @@ const Events = () => {
   };
 
   const groupEventsByDate = (events: Event[]) => {
-    const grouped = events.reduce((acc, event) => {
+    const now = new Date();
+    const upcomingEvents = events.filter(e => new Date(e.date_time) >= now);
+    const pastEvents = events.filter(e => new Date(e.date_time) < now);
+    
+    const sortedEvents = [...upcomingEvents, ...pastEvents];
+    
+    const grouped = sortedEvents.reduce((acc, event) => {
       const dateKey = format(new Date(event.date_time), 'EEEE, MMMM d, yyyy');
       if (!acc[dateKey]) {
         acc[dateKey] = [];
@@ -228,9 +233,7 @@ const Events = () => {
       return acc;
     }, {} as Record<string, Event[]>);
     
-    return Object.entries(grouped).sort(([dateA], [dateB]) => 
-      new Date(dateA).getTime() - new Date(dateB).getTime()
-    );
+    return Object.entries(grouped);
   };
 
   // Debounce search to avoid too many queries
@@ -356,9 +359,10 @@ const Events = () => {
                   {date}
                 </h2>
                 <div className="space-y-3">
-                  {dateEvents.map((event) => (
-                    <EventCard key={event.id} event={event} />
-                  ))}
+                  {dateEvents.map((event) => {
+                    const isPastEvent = new Date(event.date_time) < new Date();
+                    return <EventCard key={event.id} event={event} isPastEvent={isPastEvent} />;
+                  })}
                 </div>
               </div>
             ))}
