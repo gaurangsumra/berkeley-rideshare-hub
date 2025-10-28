@@ -218,7 +218,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailPromises = recipientEmails.map(async (email) => {
       console.log(`Attempting to send email to: ${email}`);
       return await resend.emails.send({
-        from: "Berkeley Rides <onboarding@resend.dev>",
+        from: "Berkeley Rides <notifications@berkeleyrides.com>",
         to: [email],
         subject: subject,
         html: html,
