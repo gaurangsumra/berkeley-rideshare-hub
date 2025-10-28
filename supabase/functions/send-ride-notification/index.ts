@@ -16,7 +16,8 @@ interface NotificationRequest {
     | "member_left"
     | "payment_request"
     | "ride_deleted"
-    | "meeting_point_changed";
+    | "meeting_point_changed"
+    | "new_chat_message";
   rideId: string;
   recipientEmails: string[];
   actorName?: string;
@@ -24,6 +25,7 @@ interface NotificationRequest {
   meetingPoint?: string;
   amount?: number;
   splitAmount?: number;
+  messagePreview?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -50,6 +52,7 @@ const handler = async (req: Request): Promise<Response> => {
       meetingPoint,
       amount,
       splitAmount,
+      messagePreview,
     }: NotificationRequest = await req.json();
 
     console.log(`Sending ${type} notification for ride ${rideId} to ${recipientEmails.length} recipients`);
@@ -134,6 +137,17 @@ const handler = async (req: Request): Promise<Response> => {
           <p><strong>Departure:</strong> ${departureDate}</p>
           <p><strong>Travel Mode:</strong> ${ride?.travel_mode}</p>
           <p>Make sure to arrive on time!</p>
+        `;
+        break;
+
+      case "new_chat_message":
+        subject = `New message in your ride to ${finalEventName}`;
+        html = `
+          <h2>New Chat Message</h2>
+          <p><strong>${actorName}</strong> sent a message in your ride group to <strong>${finalEventName}</strong>.</p>
+          <p><em>"${messagePreview}"</em></p>
+          <p><strong>Departure:</strong> ${departureDate}</p>
+          <p>Log in to view the full conversation and respond.</p>
         `;
         break;
     }

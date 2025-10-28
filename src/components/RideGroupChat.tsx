@@ -129,18 +129,55 @@ export const RideGroupChat = ({ open, onOpenChange, rideId, rideName }: RideGrou
     }
 
     setLoading(true);
+    const messageText = newMessage.trim();
+    
     const { error } = await supabase
       .from('ride_group_messages')
       .insert({
         ride_id: rideId,
         user_id: session.user.id,
-        message: newMessage.trim(),
+        message: messageText,
       });
 
     if (error) {
       toast({ title: "Failed to send message", variant: "destructive" });
     } else {
       setNewMessage("");
+      
+      // Send email notifications to all members except sender
+      try {
+        const { data: members } = await supabase
+          .from('ride_members')
+          .select('user_id, profiles(email, name)')
+          .eq('ride_id', rideId)
+          .neq('user_id', session.user.id);
+
+        if (members && members.length > 0) {
+          const recipientEmails = members
+            .map(m => m.profiles?.email)
+            .filter(Boolean) as string[];
+
+          if (recipientEmails.length > 0) {
+            const { data: senderProfile } = await supabase
+              .from('profiles')
+              .select('name')
+              .eq('id', session.user.id)
+              .single();
+
+            await supabase.functions.invoke('send-ride-notification', {
+              body: {
+                type: 'new_chat_message',
+                rideId: rideId,
+                recipientEmails: recipientEmails,
+                actorName: senderProfile?.name || 'Someone',
+                messagePreview: messageText.substring(0, 50) + (messageText.length > 50 ? '...' : ''),
+              }
+            });
+          }
+        }
+      } catch (emailError) {
+        console.error('Failed to send email notifications:', emailError);
+      }
     }
     
     setLoading(false);

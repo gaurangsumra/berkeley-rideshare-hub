@@ -14,6 +14,7 @@ import RideDetail from "./pages/RideDetail";
 import UserProfile from "./pages/UserProfile";
 import Notifications from "./pages/Notifications";
 import ResetPassword from "./pages/ResetPassword";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/my-rides" element={<MyRides />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/admin" element={<Admin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

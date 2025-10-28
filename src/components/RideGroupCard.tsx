@@ -171,6 +171,43 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
     
     try {
       setLoading(true);
+
+      // Get the event_id from the ride group to check for conflicts
+      const { data: rideData } = await supabase
+        .from('ride_groups')
+        .select('event_id')
+        .eq('id', rideGroup.id)
+        .single();
+
+      if (rideData) {
+        // Check if user is already in another ride for this event
+        const { data: existingMembership } = await supabase
+          .from('ride_members')
+          .select(`
+            ride_id,
+            ride_groups!inner(
+              id,
+              event_id,
+              travel_mode,
+              departure_time
+            )
+          `)
+          .eq('user_id', currentUserId)
+          .eq('status', 'joined')
+          .eq('ride_groups.event_id', rideData.event_id)
+          .neq('ride_id', rideGroup.id);
+
+        if (existingMembership && existingMembership.length > 0) {
+          const existingRide = existingMembership[0].ride_groups;
+          toast.error(
+            `You're already in a ride group for this event (departing at ${format(new Date(existingRide.departure_time), 'h:mm a')}). Please leave that group first.`,
+            { duration: 5000 }
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
       const role = isCarpool ? 'rider' : null;
       
       const { error } = await supabase.from('ride_members').insert({

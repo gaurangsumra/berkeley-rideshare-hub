@@ -1,7 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
-import { Calendar, Car, User, Info } from "lucide-react";
+import { Calendar, Car, User, Info, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserAuthorization } from "@/hooks/useUserAuthorization";
+import { useUserRole } from "@/hooks/useUserRole";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AboutSheet } from "@/components/AboutSheet";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,9 @@ import { Button } from "@/components/ui/button";
 export const Navigation = () => {
   const location = useLocation();
   const { isBerkeleyUser } = useUserAuthorization();
+  const { isAdmin } = useUserRole();
 
-  const links = isBerkeleyUser
+  const baseLinks = isBerkeleyUser
     ? [
         { href: "/events", icon: Calendar, label: "Events" },
         { href: "/my-rides", icon: Car, label: "My Rides" },
@@ -20,6 +22,10 @@ export const Navigation = () => {
         { href: "/my-rides", icon: Car, label: "My Rides" },
         { href: "/profile", icon: User, label: "Profile" },
       ];
+
+  const links = isAdmin 
+    ? [...baseLinks, { href: "/admin", icon: Shield, label: "Admin" }]
+    : baseLinks;
 
   return (
     <>
