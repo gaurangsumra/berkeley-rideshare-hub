@@ -43,6 +43,7 @@ export const CreateRideDialog = ({
     time: eventDate ? calculateDefaultTime(eventDate) : "",
     rideshare: false,
     carpool: false,
+    rideshareCapacity: 4,
     maxCapacity: 3,
     minCapacity: 1,
   });
@@ -55,6 +56,7 @@ export const CreateRideDialog = ({
         time: calculateDefaultTime(eventDate),
         rideshare: false,
         carpool: false,
+        rideshareCapacity: 4,
         maxCapacity: 3,
         minCapacity: 1,
       });
@@ -87,7 +89,7 @@ export const CreateRideDialog = ({
           event_id: eventId,
           departure_time: departureTime,
           travel_mode: "Rideshare (Uber/Lyft)",
-          capacity: 4,
+          capacity: formData.rideshareCapacity,
           min_capacity: 1,
           created_by: session.user.id,
         });
@@ -137,6 +139,7 @@ export const CreateRideDialog = ({
         time: "", 
         rideshare: false,
         carpool: false,
+        rideshareCapacity: 4,
         maxCapacity: 3,
         minCapacity: 1,
       });
@@ -219,6 +222,26 @@ export const CreateRideDialog = ({
             </div>
           </div>
 
+          {formData.rideshare && (
+            <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+              <Label htmlFor="rideshareCapacity">Rideshare Capacity</Label>
+              <Input
+                id="rideshareCapacity"
+                type="number"
+                min="1"
+                value={formData.rideshareCapacity}
+                onChange={(e) => setFormData({ 
+                  ...formData, 
+                  rideshareCapacity: Math.max(1, parseInt(e.target.value) || 1)
+                })}
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground">
+                How many people can join this rideshare
+              </p>
+            </div>
+          )}
+
           {formData.carpool && (
             <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
               <div>
@@ -227,11 +250,10 @@ export const CreateRideDialog = ({
                   id="maxCapacity"
                   type="number"
                   min="1"
-                  max="7"
                   value={formData.maxCapacity}
                   onChange={(e) => setFormData({ 
                     ...formData, 
-                    maxCapacity: Math.max(1, Math.min(7, parseInt(e.target.value) || 1)),
+                    maxCapacity: Math.max(1, parseInt(e.target.value) || 1),
                     minCapacity: Math.min(formData.minCapacity, parseInt(e.target.value) || 1)
                   })}
                   className="mt-1"

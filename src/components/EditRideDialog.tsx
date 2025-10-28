@@ -72,8 +72,8 @@ export const EditRideDialog = ({
       return;
     }
 
-    if (capacity < 1 || capacity > 10) {
-      toast.error("Capacity must be between 1 and 10");
+    if (capacity < 1) {
+      toast.error("Capacity must be at least 1");
       return;
     }
 
@@ -240,7 +240,6 @@ export const EditRideDialog = ({
                 id="capacity"
                 type="number"
                 min={currentMemberCount}
-                max={10}
                 value={capacity}
                 onChange={(e) => setCapacity(parseInt(e.target.value))}
                 required
