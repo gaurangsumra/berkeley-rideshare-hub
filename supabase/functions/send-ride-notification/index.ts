@@ -32,6 +32,8 @@ interface NotificationRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  console.log("=== send-ride-notification invoked ===");
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -39,12 +41,33 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    
+    console.log("Environment check:", {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      hasResendKey: !!resendKey,
+    });
+
+    if (!resendKey) {
+      throw new Error("RESEND_API_KEY is not configured");
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
+      console.error("Missing authorization header");
       throw new Error("No authorization header");
     }
+
+    const requestBody = await req.json();
+    console.log("Request payload:", {
+      type: requestBody.type,
+      rideId: requestBody.rideId,
+      recipientCount: requestBody.recipientEmails?.length,
+      actorName: requestBody.actorName,
+    });
 
     const {
       type,
@@ -58,9 +81,18 @@ const handler = async (req: Request): Promise<Response> => {
       messagePreview,
       departureTime,
       capacity,
-    }: NotificationRequest = await req.json();
+    }: NotificationRequest = requestBody;
 
-    console.log(`Sending ${type} notification for ride ${rideId} to ${recipientEmails.length} recipients`);
+    if (!recipientEmails || recipientEmails.length === 0) {
+      console.log("No recipients provided, skipping email sending");
+      return new Response(
+        JSON.stringify({ success: true, sent: 0, failed: 0, message: "No recipients" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Processing ${type} notification for ride ${rideId}`);
+    console.log(`Recipients: ${recipientEmails.join(", ")}`);
 
     // Fetch ride details
     const { data: ride } = await supabase
@@ -181,7 +213,10 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Send emails to all recipients
+    console.log(`Sending emails with subject: "${subject}"`);
+    
     const emailPromises = recipientEmails.map(async (email) => {
+      console.log(`Attempting to send email to: ${email}`);
       return await resend.emails.send({
         from: "Berkeley Rides <notifications@resend.dev>",
         to: [email],
@@ -194,8 +229,17 @@ const handler = async (req: Request): Promise<Response> => {
     
     const successCount = results.filter((r) => r.status === "fulfilled").length;
     const failureCount = results.filter((r) => r.status === "rejected").length;
+    
+    // Log detailed results
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        console.error(`Failed to send to ${recipientEmails[index]}:`, result.reason);
+      } else {
+        console.log(`Successfully sent to ${recipientEmails[index]}`);
+      }
+    });
 
-    console.log(`Email notifications sent: ${successCount} succeeded, ${failureCount} failed`);
+    console.log(`=== Email send complete: ${successCount} succeeded, ${failureCount} failed ===`);
 
     return new Response(
       JSON.stringify({
@@ -208,8 +252,10 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: any) {
-    console.error("Error in send-ride-notification function:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("=== CRITICAL ERROR in send-ride-notification ===");
+    console.error("Error details:", error);
+    console.error("Stack trace:", error.stack);
+    return new Response(JSON.stringify({ error: error.message, stack: error.stack }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
