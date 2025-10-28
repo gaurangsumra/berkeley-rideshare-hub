@@ -16,6 +16,7 @@ interface NotificationRequest {
     | "member_left"
     | "payment_request"
     | "ride_deleted"
+    | "ride_updated"
     | "meeting_point_changed"
     | "new_chat_message";
   rideId: string;
@@ -26,6 +27,8 @@ interface NotificationRequest {
   amount?: number;
   splitAmount?: number;
   messagePreview?: string;
+  departureTime?: string;
+  capacity?: number;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -53,6 +56,8 @@ const handler = async (req: Request): Promise<Response> => {
       amount,
       splitAmount,
       messagePreview,
+      departureTime,
+      capacity,
     }: NotificationRequest = await req.json();
 
     console.log(`Sending ${type} notification for ride ${rideId} to ${recipientEmails.length} recipients`);
@@ -137,6 +142,28 @@ const handler = async (req: Request): Promise<Response> => {
           <p><strong>Departure:</strong> ${departureDate}</p>
           <p><strong>Travel Mode:</strong> ${ride?.travel_mode}</p>
           <p>Make sure to arrive on time!</p>
+        `;
+        break;
+
+      case "ride_updated":
+        const updatedDepartureDate = departureTime
+          ? new Date(departureTime).toLocaleString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })
+          : departureDate;
+        subject = `Ride to ${finalEventName} has been updated`;
+        html = `
+          <h2>Ride Details Updated</h2>
+          <p><strong>${actorName}</strong> has updated the details for your ride to <strong>${finalEventName}</strong>.</p>
+          <p><strong>Updated Departure:</strong> ${updatedDepartureDate}</p>
+          ${capacity ? `<p><strong>Updated Capacity:</strong> ${capacity} people</p>` : ""}
+          ${meetingPoint ? `<p><strong>Updated Meeting Point:</strong> ${meetingPoint}</p>` : ""}
+          <p><strong>Travel Mode:</strong> ${ride?.travel_mode}</p>
+          <p>Please check the ride details to ensure you're aware of the changes.</p>
         `;
         break;
 

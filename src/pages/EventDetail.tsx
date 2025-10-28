@@ -39,6 +39,9 @@ interface RideGroup {
   travel_mode: string;
   meeting_point: string | null;
   capacity: number;
+  min_capacity: number;
+  created_by: string;
+  event_id: string;
   ride_members: { user_id: string; role: string | null }[];
 }
 

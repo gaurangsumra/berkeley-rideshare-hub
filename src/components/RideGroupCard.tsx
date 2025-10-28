@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Clock, Users, MapPin, UserPlus, Trash2, MessageCircle, Share2, CheckCircle } from "lucide-react";
+import { Clock, Users, MapPin, UserPlus, Trash2, MessageCircle, Share2, CheckCircle, Pencil } from "lucide-react";
 import { RideGroupChat } from "@/components/RideGroupChat";
 import { CapacityVisualization } from "@/components/CapacityVisualization";
 import { ShareRideDetails } from "@/components/ShareRideDetails";
@@ -17,6 +17,7 @@ import { MeetingPointVoting } from "@/components/MeetingPointVoting";
 import { UberPaymentDialog } from "@/components/UberPaymentDialog";
 import { InviteDialog } from "@/components/InviteDialog";
 import { AttendanceSurveyDialog } from "@/components/AttendanceSurveyDialog";
+import { EditRideDialog } from "@/components/EditRideDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +35,9 @@ interface RideGroup {
   travel_mode: string;
   meeting_point: string | null;
   capacity: number;
+  min_capacity: number;
+  created_by: string;
+  event_id: string;
   ride_members: { user_id: string; role: string | null }[];
 }
 
@@ -50,6 +54,7 @@ interface RideGroupCardProps {
   onUpdate: () => void;
   isAdmin: boolean;
   event: {
+    id: string;
     name: string;
     destination: string;
     city: string;
@@ -71,11 +76,13 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
   const [leaderMeetingPoint, setLeaderMeetingPoint] = useState<string | null>(null);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showAttendanceDialog, setShowAttendanceDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   const isMember = currentUserId && rideGroup.ride_members.some(m => m.user_id === currentUserId);
   const isDriver = currentUserId && rideGroup.ride_members.some(m => m.user_id === currentUserId && m.role === 'driver');
   const isFull = rideGroup.ride_members.length >= rideGroup.capacity;
   const canDeleteRide = rideGroup.ride_members.length <= 1 && (isAdmin || isMember);
+  const isCreator = currentUserId === rideGroup.created_by;
   const driver = members.find(m => 
     rideGroup.ride_members.find(rm => rm.user_id === m.id && rm.role === 'driver')
   );
@@ -423,6 +430,17 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
                 : `${rideGroup.ride_members.length}/${rideGroup.capacity}`
               }
             </Badge>
+            {isCreator && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowEditDialog(true)}
+                className="h-8 w-8"
+                title="Edit ride details"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
             {canDeleteRide && (
               <Button
                 variant="ghost"
@@ -701,6 +719,15 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
           eventName={event.name}
         />
       )}
+
+      <EditRideDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        ride={rideGroup}
+        event={event}
+        currentMemberCount={rideGroup.ride_members.length}
+        onRideUpdated={onUpdate}
+      />
     </Card>
   );
 };

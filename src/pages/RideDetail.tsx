@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Clock, Users, MapPin, MessageCircle, Share2, DollarSign, UserPlus, Trash2 } from "lucide-react";
+import { ArrowLeft, Clock, Users, MapPin, MessageCircle, Share2, DollarSign, UserPlus, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { RideGroupChat } from "@/components/RideGroupChat";
@@ -16,6 +16,7 @@ import { InviteDialog } from "@/components/InviteDialog";
 import { AttendanceSurveyDialog } from "@/components/AttendanceSurveyDialog";
 import { RatingBadge } from "@/components/RatingBadge";
 import { Navigation } from "@/components/Navigation";
+import { EditRideDialog } from "@/components/EditRideDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +34,7 @@ interface RideGroup {
   travel_mode: string;
   meeting_point: string | null;
   capacity: number;
+  min_capacity: number;
   event_id: string;
   created_by: string;
 }
@@ -69,6 +71,7 @@ const RideDetail = () => {
   const [showAttendance, setShowAttendance] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [leaderMeetingPoint, setLeaderMeetingPoint] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -348,6 +351,7 @@ const RideDetail = () => {
   const isDriver = currentUserId && members.some(m => m.id === currentUserId && m.role === 'driver');
   const isFull = members.length >= ride.capacity;
   const canDeleteRide = members.length <= 1 && isMember;
+  const isCreator = currentUserId === ride.created_by;
   const isCarpool = ride.travel_mode === 'Carpool (Student Driver)';
   const driver = members.find(m => m.role === 'driver');
   const passengerCount = members.filter(m => m.role !== 'driver').length;
@@ -498,6 +502,18 @@ const RideDetail = () => {
 
           {isMember && (
             <>
+              {isCreator && (
+                <Button
+                  onClick={() => setShowEditDialog(true)}
+                  variant="outline"
+                  className="w-full"
+                  size="lg"
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit Ride Details
+                </Button>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <Button
                   onClick={() => setShowVoting(true)}
@@ -634,6 +650,15 @@ const RideDetail = () => {
         onOpenChange={setShowAttendance}
         rideId={ride.id}
         eventName={event.name}
+      />
+
+      <EditRideDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        ride={ride}
+        event={event}
+        currentMemberCount={members.length}
+        onRideUpdated={fetchRideData}
       />
 
       <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
