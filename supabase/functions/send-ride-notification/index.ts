@@ -212,20 +212,41 @@ const handler = async (req: Request): Promise<Response> => {
         break;
     }
 
-    // Send emails to all recipients
-    console.log(`Sending emails with subject: "${subject}"`);
-    
-    const emailPromises = recipientEmails.map(async (email) => {
-      console.log(`Attempting to send email to: ${email}`);
-      return await resend.emails.send({
-        from: "Berkeley Rides <notifications@berkeleyrides.com>",
-        to: [email],
-        subject: subject,
-        html: html,
-      });
-    });
+    // Helper function to add delay between batches
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-    const results = await Promise.allSettled(emailPromises);
+    // Send emails in batches to respect Resend rate limits (2 per second)
+    const BATCH_SIZE = 2;
+    const DELAY_MS = 1100; // Slightly over 1 second to be safe
+
+    console.log(`Sending emails with subject: "${subject}"`);
+
+    const results: PromiseSettledResult<any>[] = [];
+
+    for (let i = 0; i < recipientEmails.length; i += BATCH_SIZE) {
+      const batch = recipientEmails.slice(i, i + BATCH_SIZE);
+      
+      console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.join(", ")}`);
+      
+      const batchPromises = batch.map(async (email) => {
+        console.log(`Attempting to send email to: ${email}`);
+        return await resend.emails.send({
+          from: "Berkeley Rides <notifications@berkeleyrides.com>",
+          to: [email],
+          subject: subject,
+          html: html,
+        });
+      });
+      
+      const batchResults = await Promise.allSettled(batchPromises);
+      results.push(...batchResults);
+      
+      // Add delay between batches (but not after the last batch)
+      if (i + BATCH_SIZE < recipientEmails.length) {
+        console.log(`Waiting ${DELAY_MS}ms before next batch...`);
+        await delay(DELAY_MS);
+      }
+    }
     
     const successCount = results.filter((r) => r.status === "fulfilled").length;
     const failureCount = results.filter((r) => r.status === "rejected").length;
