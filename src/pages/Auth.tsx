@@ -80,6 +80,12 @@ const Auth = () => {
     const token = params.get('invite');
     
     if (token) {
+      // Validate UUID format to prevent malformed tokens
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(token)) {
+        toast.error('Invalid invite link');
+        return;
+      }
       setInviteToken(token);
       validateInviteToken(token);
     }
@@ -205,20 +211,7 @@ const Auth = () => {
 
       if (error) throw error;
 
-      if (inviteToken && data.user) {
-        const { data: inviteData } = await supabase
-          .from('ride_invites')
-          .select('use_count')
-          .eq('invite_token', inviteToken)
-          .single();
-        
-        if (inviteData) {
-          await supabase
-            .from('ride_invites')
-            .update({ use_count: inviteData.use_count + 1 })
-            .eq('invite_token', inviteToken);
-        }
-      }
+      // Note: invite use_count is now handled server-side via database trigger
       
       toast.success("Verification email sent! Please check your inbox and verify your email before signing in.", {
         duration: 6000
