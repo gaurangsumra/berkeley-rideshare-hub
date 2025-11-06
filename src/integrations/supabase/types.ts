@@ -1053,6 +1053,7 @@ export type Database = {
         | "payment_reminder"
         | "payment_confirmed"
         | "venmo_required"
+        | "attendance_survey"
       survey_status: "pending" | "in_progress" | "completed" | "expired"
     }
     CompositeTypes: {
@@ -1194,6 +1195,7 @@ export const Constants = {
         "payment_reminder",
         "payment_confirmed",
         "venmo_required",
+        "attendance_survey",
       ],
       survey_status: ["pending", "in_progress", "completed", "expired"],
     },
