@@ -567,6 +567,7 @@ export type Database = {
           consensus_processed: boolean
           created_at: string | null
           id: string
+          reminder_sent_at: string | null
           responses_received: number
           ride_id: string
           survey_deadline: string
@@ -579,6 +580,7 @@ export type Database = {
           consensus_processed?: boolean
           created_at?: string | null
           id?: string
+          reminder_sent_at?: string | null
           responses_received?: number
           ride_id: string
           survey_deadline: string
@@ -591,6 +593,7 @@ export type Database = {
           consensus_processed?: boolean
           created_at?: string | null
           id?: string
+          reminder_sent_at?: string | null
           responses_received?: number
           ride_id?: string
           survey_deadline?: string
@@ -1054,6 +1057,7 @@ export type Database = {
         | "payment_confirmed"
         | "venmo_required"
         | "attendance_survey"
+        | "attendance_survey_reminder"
       survey_status: "pending" | "in_progress" | "completed" | "expired"
     }
     CompositeTypes: {
@@ -1196,6 +1200,7 @@ export const Constants = {
         "payment_confirmed",
         "venmo_required",
         "attendance_survey",
+        "attendance_survey_reminder",
       ],
       survey_status: ["pending", "in_progress", "completed", "expired"],
     },

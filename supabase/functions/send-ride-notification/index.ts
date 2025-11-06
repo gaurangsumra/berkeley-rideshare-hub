@@ -18,7 +18,9 @@ interface NotificationRequest {
     | "ride_deleted"
     | "ride_updated"
     | "meeting_point_changed"
-    | "new_chat_message";
+    | "new_chat_message"
+    | "attendance_survey"
+    | "attendance_survey_reminder";
   rideId: string;
   recipientEmails: string[];
   actorName?: string;
@@ -29,6 +31,7 @@ interface NotificationRequest {
   messagePreview?: string;
   departureTime?: string;
   capacity?: number;
+  surveyDeadline?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -81,6 +84,7 @@ const handler = async (req: Request): Promise<Response> => {
       messagePreview,
       departureTime,
       capacity,
+      surveyDeadline,
     }: NotificationRequest = requestBody;
 
     if (!recipientEmails || recipientEmails.length === 0) {
@@ -208,6 +212,39 @@ const handler = async (req: Request): Promise<Response> => {
           <p><strong>Departure:</strong> ${departureDate}</p>
           <p><a href="${Deno.env.get("FRONTEND_URL")}/rides/${rideId}?openChat=true" style="display: inline-block; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0;">View Chat</a></p>
           <p>Log in to view the full conversation and respond.</p>
+        `;
+        break;
+
+      case "attendance_survey":
+        const deadlineDate = surveyDeadline
+          ? new Date(surveyDeadline).toLocaleString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })
+          : "";
+        subject = `🚗 Rate your ride companions for ${finalEventName}`;
+        html = `
+          <h2>Your Ride Has Ended!</h2>
+          <p>Please confirm who showed up for your ride to <strong>${finalEventName}</strong>.</p>
+          <p><strong>Why this matters:</strong> Your response helps build trust in our community and ensures accurate ride completion records.</p>
+          <p><strong>Deadline:</strong> ${deadlineDate} (48 hours)</p>
+          <p><a href="${Deno.env.get("FRONTEND_URL")}/my-rides" style="display: inline-block; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0;">Confirm Attendance</a></p>
+          <p>This will only take a moment – just check off who was there!</p>
+        `;
+        break;
+
+      case "attendance_survey_reminder":
+        subject = `⏰ Reminder: Rate your ride companions for ${finalEventName}`;
+        html = `
+          <h2>Reminder: Attendance Confirmation Needed</h2>
+          <p>You haven't confirmed who showed up for your ride to <strong>${finalEventName}</strong> yet.</p>
+          <p><strong>Your response is important!</strong> It helps maintain trust and accountability in our ride-sharing community.</p>
+          <p>Please take a moment to confirm attendance before the deadline.</p>
+          <p><a href="${Deno.env.get("FRONTEND_URL")}/my-rides" style="display: inline-block; padding: 10px 20px; background-color: #ef4444; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0;">Confirm Now</a></p>
+          <p><em>If enough members don't respond, we won't be able to credit ride completions.</em></p>
         `;
         break;
     }
