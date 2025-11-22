@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { EventComments } from "./EventComments";
 
+import { EventInterest } from "./EventInterest";
+
 interface Event {
   id: string;
   name: string;
@@ -25,7 +27,7 @@ export const EventCard = ({ event, isPastEvent = false }: EventCardProps) => {
   const navigate = useNavigate();
 
   return (
-    <Card 
+    <Card
       className={`cursor-pointer hover:border-accent transition-colors ${isPastEvent ? 'opacity-60 grayscale' : ''}`}
       onClick={() => navigate(`/events/${event.id}`)}
     >
@@ -37,7 +39,8 @@ export const EventCard = ({ event, isPastEvent = false }: EventCardProps) => {
               <Badge variant="secondary" className="text-xs">Past Event</Badge>
             )}
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-2 shrink-0 items-center">
+            <EventInterest eventId={event.id} />
             {event.member_count !== undefined && event.member_count > 0 && (
               <Badge variant="secondary" className="ml-2">
                 <Users className="w-3 h-3 mr-1" />
@@ -51,21 +54,21 @@ export const EventCard = ({ event, isPastEvent = false }: EventCardProps) => {
             )}
           </div>
         </div>
-        
+
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Calendar className="w-4 h-4" />
             <span>{format(new Date(event.date_time), 'EEEE, MMMM d, yyyy')}</span>
           </div>
-          
+
           <div className="flex items-center gap-2 text-muted-foreground">
             <Clock className="w-4 h-4" />
             <span>{format(new Date(event.date_time), 'h:mm a')}</span>
           </div>
-          
+
           <div className="flex items-center gap-2 text-muted-foreground">
             <MapPin className="w-4 h-4" />
-            <a 
+            <a
               href={`https://www.google.com/maps?q=${encodeURIComponent(`${event.destination}, ${event.city}`)}`}
               target="_blank"
               rel="noopener noreferrer"

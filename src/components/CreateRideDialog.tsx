@@ -36,6 +36,7 @@ export const CreateRideDialog = ({
   eventId,
   eventDate,
   onRideCreated,
+  initialInvitees,
 }: CreateRideDialogProps) => {
   const [loading, setLoading] = useState(false);
 

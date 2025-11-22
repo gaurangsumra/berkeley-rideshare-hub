@@ -14,21 +14,14 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Upload, Calendar, Loader2 } from "lucide-react";
 import { format } from "date-fns";
-
-interface ParsedEvent {
-  id: string;
-  name: string;
-  dateTime: Date;
-  destination: string;
-  city: string;
-  description: string;
-  selected: boolean;
-}
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { GoogleCalendarImport, ParsedEvent } from "./GoogleCalendarImport";
 
 interface ImportCalendarDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEventsImported: () => void;
+  defaultTab?: 'file' | 'google';
 }
 
 const parseCity = (locationString: string): string => {
@@ -50,7 +43,7 @@ const parseCity = (locationString: string): string => {
   return parts[0] || "";
 };
 
-export function ImportCalendarDialog({ open, onOpenChange, onEventsImported }: ImportCalendarDialogProps) {
+export function ImportCalendarDialog({ open, onOpenChange, onEventsImported, defaultTab = 'file' }: ImportCalendarDialogProps) {
   const [parsedEvents, setParsedEvents] = useState<ParsedEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -268,9 +261,9 @@ export function ImportCalendarDialog({ open, onOpenChange, onEventsImported }: I
       setParsedEvents([]);
       onOpenChange(false);
       onEventsImported();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Import error:', error);
-      toast.error(error.message || "Failed to import events");
+      toast.error((error as Error).message || "Failed to import events");
     } finally {
       setImporting(false);
     }
@@ -290,42 +283,55 @@ export function ImportCalendarDialog({ open, onOpenChange, onEventsImported }: I
 
         <div className="mt-4">
           {parsedEvents.length === 0 ? (
-            <div
-              className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${dragActive ? 'border-primary bg-muted' : 'border-muted-foreground/25'
-                }`}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-            >
-              {loading ? (
-                <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="w-12 h-12 text-muted-foreground animate-spin" />
-                  <p className="text-muted-foreground">Parsing calendar...</p>
+            <Tabs defaultValue={defaultTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="file">Upload .ICS File</TabsTrigger>
+                <TabsTrigger value="google">Google Calendar</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="file">
+                <div
+                  className={`mt-4 border-2 border-dashed rounded-lg p-12 text-center transition-colors ${dragActive ? 'border-primary bg-muted' : 'border-muted-foreground/25'
+                    }`}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                >
+                  {loading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="w-12 h-12 text-muted-foreground animate-spin" />
+                      <p className="text-muted-foreground">Parsing calendar...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-foreground mb-2">Drop your .ics file here or click to upload</p>
+                      <p className="text-sm text-muted-foreground mb-4">Maximum file size: 5MB</p>
+                      <input
+                        type="file"
+                        accept=".ics,.ical"
+                        onChange={handleFileInput}
+                        className="hidden"
+                        id="calendar-file"
+                      />
+                      <label htmlFor="calendar-file">
+                        <Button type="button" variant="outline" asChild>
+                          <span>
+                            <Calendar className="w-4 h-4 mr-2" />
+                            Select File
+                          </span>
+                        </Button>
+                      </label>
+                    </>
+                  )}
                 </div>
-              ) : (
-                <>
-                  <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-foreground mb-2">Drop your .ics file here or click to upload</p>
-                  <p className="text-sm text-muted-foreground mb-4">Maximum file size: 5MB</p>
-                  <input
-                    type="file"
-                    accept=".ics,.ical"
-                    onChange={handleFileInput}
-                    className="hidden"
-                    id="calendar-file"
-                  />
-                  <label htmlFor="calendar-file">
-                    <Button type="button" variant="outline" asChild>
-                      <span>
-                        <Calendar className="w-4 h-4 mr-2" />
-                        Select File
-                      </span>
-                    </Button>
-                  </label>
-                </>
-              )}
-            </div>
+              </TabsContent>
+
+              <TabsContent value="google">
+                <GoogleCalendarImport onEventsFetched={setParsedEvents} />
+              </TabsContent>
+            </Tabs>
           ) : (
             <div className="space-y-4">
               <div className="rounded-lg border">

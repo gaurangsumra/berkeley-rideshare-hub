@@ -10,16 +10,38 @@ import { PhotoEditorDialog } from "@/components/PhotoEditorDialog";
 
 import { ImportCalendarDialog } from "@/components/ImportCalendarDialog";
 import { Calendar } from "lucide-react";
+import { Database } from "@/integrations/supabase/types";
+
+type Profile = Database['public']['Tables']['profiles']['Row'];
+
+interface InviteDetails {
+  ride_id: string;
+  expires_at: string;
+  max_uses: number | null;
+  use_count: number;
+  inviter_name: string | null;
+  invited_email: string | null;
+  ride_groups?: {
+    departure_time: string;
+    event_id: string;
+    capacity: number;
+    events: {
+      name: string;
+      destination: string;
+    };
+  };
+}
+
 const Onboarding = () => {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
-  const [inviteDetails, setInviteDetails] = useState<any>(null);
-  const [step, setStep] = useState<'photo' | 'calendar'>('photo');
+  const [inviteDetails, setInviteDetails] = useState<InviteDetails | null>(null);
+  const [step, setStep] = useState<'photo' | 'calendar' | 'invite'>('photo');
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -31,6 +53,18 @@ const Onboarding = () => {
       // Step 1: Get session first
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        // If we have a token but no session, redirect to auth with the token param
+        if (token) {
+          // Store token in local storage or pass it via state? 
+          // The auth page should handle the return URL with query params.
+          // Usually navigate("/auth") preserves nothing unless we tell it.
+          // But if the user clicks the link, they land here.
+          // If we redirect to /auth, we should probably keep the search params.
+          // But for now, let's assume the auth flow handles return_to or the user signs in and comes back.
+          // Actually, if they sign in, they might be redirected to /events by Index.tsx.
+          // We need to make sure they come back to /onboarding?invite=...
+          // This is a broader auth issue, but let's focus on the Onboarding component logic for now.
+        }
         navigate("/auth");
         return;
       }
@@ -117,6 +151,7 @@ const Onboarding = () => {
     }
 
     try {
+      setUploading(true); // Reuse uploading state for loading UI
       console.log('Processing invite join for ride:', inviteDetails.ride_id);
 
       // Step 1: Verify email match if invited_email is set
@@ -126,6 +161,7 @@ const Onboarding = () => {
 
         if (normalizedInviteEmail !== normalizedProfileEmail) {
           toast.error(`This invite is for ${inviteDetails.invited_email}. Please sign in with that email.`);
+          setUploading(false);
           return false;
         }
       }
@@ -142,6 +178,7 @@ const Onboarding = () => {
       if (profileError) {
         console.error('Failed to update profile:', profileError);
         toast.error("Failed to process invite");
+        setUploading(false);
         return false;
       }
 
@@ -157,6 +194,7 @@ const Onboarding = () => {
 
       if (existingMember) {
         toast.info("You're already a member of this ride");
+        navigate(`/rides/${inviteDetails.ride_id}`);
         return true;
       }
 
@@ -171,6 +209,7 @@ const Onboarding = () => {
 
       if (capacity && memberCount >= capacity) {
         toast.error("This ride is at full capacity");
+        setUploading(false);
         return false;
       }
 
@@ -188,6 +227,7 @@ const Onboarding = () => {
       if (joinError) {
         console.error('Join error:', joinError);
         toast.error("Failed to join ride");
+        setUploading(false);
         return false;
       }
 
@@ -211,15 +251,18 @@ const Onboarding = () => {
         .eq('invite_token', inviteToken);
 
       toast.success("Successfully joined the ride!");
+      navigate(`/rides/${inviteDetails.ride_id}`);
       return true;
     } catch (error) {
       console.error('Error processing invite:', error);
       toast.error("Failed to process invite");
       return false;
+    } finally {
+      setUploading(false);
     }
   };
 
-  const fetchProfile = async (userId: string, currentInviteDetails?: any) => {
+  const fetchProfile = async (userId: string, currentInviteDetails?: InviteDetails | null) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -244,40 +287,19 @@ const Onboarding = () => {
         setProfile({ ...data, is_invited_user: isExternal });
       }
 
-      // If user already has a photo, they might be here to import calendar
+      // If user already has a photo
       if (data.photo) {
-        setStep('calendar');
-
-        // If there's an invite token, process it immediately using passed-in details
+        // If there's an invite token, show the invite step
         const inviteToProcess = currentInviteDetails || inviteDetails;
         if (inviteToken && inviteToProcess) {
-          const joined = await processInviteJoin();
-          if (joined) {
-            // Redirect directly to the ride they were invited to
-            if (inviteToProcess.ride_id) {
-              console.log('Redirecting to ride:', inviteToProcess.ride_id);
-              navigate(`/rides/${inviteToProcess.ride_id}`);
-              return;
-            } else {
-              console.error('Could not determine ride_id for redirect');
-              navigate("/my-rides");
-              return;
-            }
-          }
-        }
-
-        // If invite token exists but details not loaded yet, redirect to my-rides
-        if (inviteToken) {
-          console.log('Invite token exists but details not loaded, redirecting to my-rides');
-          navigate("/my-rides");
+          setStep('invite');
           return;
         }
 
-        // We do NOT redirect automatically here anymore, so users can do the calendar step.
-        // Unless they explicitly want to skip? 
-        // The "Skip for now" button in the UI handles the redirect.
+        // Otherwise go to calendar step
+        setStep('calendar');
       }
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to load profile");
     }
   };
@@ -337,9 +359,14 @@ const Onboarding = () => {
       setEditorOpen(false);
       setSelectedFile(null);
       toast.success("Profile photo added successfully");
-      // Move to calendar step instead of completing immediately
-      setStep('calendar');
-    } catch (error: any) {
+
+      // If we have an invite, go to invite step, else calendar
+      if (inviteToken && inviteDetails) {
+        setStep('invite');
+      } else {
+        setStep('calendar');
+      }
+    } catch (error) {
       console.error('Upload error:', error);
       toast.error("Failed to upload photo");
     } finally {
@@ -350,7 +377,11 @@ const Onboarding = () => {
   const handleCompleteSetup = async () => {
     // If we are in photo step and have a photo, move to calendar
     if (step === 'photo' && photoUrl) {
-      setStep('calendar');
+      if (inviteToken && inviteDetails) {
+        setStep('invite');
+      } else {
+        setStep('calendar');
+      }
       return;
     }
 
@@ -359,25 +390,38 @@ const Onboarding = () => {
     try {
       // Process invite token if present
       if (inviteToken && inviteDetails) {
-        const joined = await processInviteJoin();
-        if (joined) {
-          let eventId = inviteDetails.ride_groups?.event_id;
+        // If they skipped the invite, we don't process it here.
+        // Just route them to the app.
+        // Check if external user
+        const isExternalUser = !profile.email?.toLowerCase().endsWith('@berkeley.edu');
 
-          if (!eventId && inviteDetails.ride_id) {
-            const { data: rideData } = await supabase
-              .from('ride_groups')
-              .select('event_id')
-              .eq('id', inviteDetails.ride_id)
-              .single();
-            eventId = rideData?.event_id;
-          }
+        // Priority 1 - Check for upcoming rides
+        const { data: upcomingRides } = await supabase
+          .from('ride_members')
+          .select(`
+            ride_id,
+            ride_groups!inner(
+              id,
+              departure_time
+            )
+          `)
+          .eq('user_id', profile.id)
+          .gte('ride_groups.departure_time', new Date().toISOString())
+          .limit(1);
 
-          if (eventId) {
-            navigate(`/events/${eventId}`);
-          } else {
-            navigate('/my-rides');
-          }
+        if (upcomingRides && upcomingRides.length > 0) {
+          navigate('/my-rides');
+          return;
         }
+
+        // Priority 2 - External users always go to My Rides
+        if (isExternalUser) {
+          navigate('/my-rides');
+          return;
+        }
+
+        // Priority 3 - Berkeley users go to Events (which will be My Events)
+        navigate("/events");
         return;
       }
 
@@ -430,16 +474,19 @@ const Onboarding = () => {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-4">
           <h2 className="text-3xl font-bold text-primary">
-            {step === 'photo' ? 'Welcome!' : 'Sync Your Schedule'}
+            {step === 'photo' ? 'Welcome!' : step === 'invite' ? 'Join Ride?' : 'Sync Your Schedule'}
           </h2>
           <p className="text-muted-foreground">
             {step === 'photo'
               ? 'One last step - add your profile photo'
-              : 'Import your calendar to find rides for your events'}
+              : step === 'invite'
+                ? 'You have been invited to a ride!'
+                : 'Import your calendar to find rides for your events'}
           </p>
         </div>
 
-        {inviteDetails && (
+        {/* Invite Card for Photo Step */}
+        {step === 'photo' && inviteDetails && (
           <Card className="mb-4 bg-primary/5 border-primary">
             <CardContent className="pt-6">
               <p className="text-sm font-medium mb-1">🎉 You're invited!</p>
@@ -453,7 +500,63 @@ const Onboarding = () => {
           </Card>
         )}
 
-        {step === 'photo' ? (
+        {step === 'invite' && inviteDetails ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Ride Invitation</CardTitle>
+              <CardDescription>
+                {inviteDetails.inviter_name || 'A Berkeley student'} invited you to join this ride.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium">{inviteDetails.ride_groups?.events?.destination}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {inviteDetails.ride_groups?.events?.name}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium">
+                      {new Date(inviteDetails.ride_groups?.departure_time).toLocaleString(undefined, {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                    <p className="text-sm text-muted-foreground">Departure Time</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Button
+                  onClick={processInviteJoin}
+                  size="lg"
+                  className="w-full"
+                  disabled={uploading}
+                >
+                  {uploading ? "Joining..." : "Accept & Join Ride"}
+                </Button>
+
+                <Button
+                  onClick={handleCompleteSetup} // This will route based on profile/existing rides
+                  variant="ghost"
+                  className="w-full"
+                  disabled={uploading}
+                >
+                  No thanks, just take me to the app
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : step === 'photo' ? (
           <Card>
             <CardHeader>
               <CardTitle>Complete Your Profile</CardTitle>
@@ -506,7 +609,13 @@ const Onboarding = () => {
               </div>
 
               <Button
-                onClick={() => setStep('calendar')}
+                onClick={() => {
+                  if (inviteToken && inviteDetails) {
+                    setStep('invite');
+                  } else {
+                    setStep('calendar');
+                  }
+                }}
                 disabled={!photoUrl || uploading}
                 size="lg"
                 className="w-full"

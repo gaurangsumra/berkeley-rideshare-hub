@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Calendar as CalendarIcon, Search, ChevronDown, Upload } from "lucide-react";
@@ -39,10 +40,21 @@ const Events = () => {
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState<Date | undefined>();
+  const [importTab, setImportTab] = useState<'file' | 'google'>('file');
   const { isExternalUser, isLoading: authLoading } = useUserAuthorization();
+
+  // Check for Google Import action
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('action') === 'google-import') {
+      setImportTab('google');
+      setImportDialogOpen(true);
+      window.history.replaceState({}, '', '/events');
+    }
+  }, []);
 
   // Redirect external users
   useEffect(() => {
@@ -159,7 +171,7 @@ const Events = () => {
       } else {
         setEvents([]);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching events:", error);
       toast.error("Failed to load events");
     } finally {
@@ -246,7 +258,7 @@ const Events = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
+                <DropdownMenuItem onClick={() => { setImportTab('file'); setImportDialogOpen(true); }}>
                   <CalendarIcon className="w-4 h-4 mr-2" />
                   Import Calendar
                 </DropdownMenuItem>
@@ -275,7 +287,7 @@ const Events = () => {
               <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6">
                 Import your calendar to automatically match with other students going to the same events.
               </p>
-              <Button onClick={() => setImportDialogOpen(true)} size="lg">
+              <Button onClick={() => { setImportTab('file'); setImportDialogOpen(true); }} size="lg">
                 <Upload className="w-4 h-4 mr-2" />
                 Import Calendar
               </Button>
@@ -323,6 +335,7 @@ const Events = () => {
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
         onEventsImported={() => user && fetchEvents(user.id)}
+        defaultTab={importTab}
       />
 
       <Navigation />
