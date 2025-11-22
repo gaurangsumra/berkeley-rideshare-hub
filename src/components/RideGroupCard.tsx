@@ -414,12 +414,12 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
   return (
     <Card className="transition-colors hover:border-accent">
       <CardHeader>
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <CardTitle className="flex items-center gap-2">
             <Clock className="w-5 h-5" />
             {format(new Date(rideGroup.departure_time), 'h:mm a')}
           </CardTitle>
-          <div className="flex gap-2 items-center">
+          <div className="flex flex-wrap gap-2 items-center">
             <Badge variant={rideGroup.travel_mode.includes('Rideshare') ? 'default' : 'secondary'}>
               {rideGroup.travel_mode.includes('Rideshare') ? 'Rideshare (Uber/Lyft)' : 'Carpool'}
             </Badge>
@@ -516,7 +516,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {!isMember && !isFull && (
             <Button onClick={handleJoinRide} disabled={loading} className="flex-1">
               Join Ride

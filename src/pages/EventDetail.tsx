@@ -242,7 +242,7 @@ const EventDetail = () => {
           onDelete={() => setDeleteDialogOpen(true)}
         />
 
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <h2 className="text-2xl font-bold text-primary">Ride Groups</h2>
           <Button onClick={() => setCreateRideOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
@@ -294,7 +294,7 @@ const EventDetail = () => {
         {/* Other Attendees Section */}
         {otherAttendees.length > 0 && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <h2 className="text-xl font-bold text-primary">Other Attendees</h2>
               {selectedAttendees.length > 0 && (
                 <Button onClick={handleCreateGroupWithAttendees} size="sm">
