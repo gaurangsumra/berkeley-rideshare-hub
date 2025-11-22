@@ -27,7 +27,7 @@ const Onboarding = () => {
       // Extract invite token from URL
       const params = new URLSearchParams(window.location.search);
       const token = params.get('invite');
-      
+
       // Step 1: Get session first
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -123,7 +123,7 @@ const Onboarding = () => {
       if (inviteDetails.invited_email) {
         const normalizedInviteEmail = inviteDetails.invited_email.toLowerCase().trim();
         const normalizedProfileEmail = profile.email?.toLowerCase().trim();
-        
+
         if (normalizedInviteEmail !== normalizedProfileEmail) {
           toast.error(`This invite is for ${inviteDetails.invited_email}. Please sign in with that email.`);
           return false;
@@ -133,9 +133,9 @@ const Onboarding = () => {
       // Step 2: Update profile FIRST (critical for RLS)
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ 
+        .update({
           is_invited_user: true,
-          invited_via_ride_id: inviteDetails.ride_id 
+          invited_via_ride_id: inviteDetails.ride_id
         })
         .eq('id', profile.id);
 
@@ -228,7 +228,7 @@ const Onboarding = () => {
         .single();
 
       if (error) throw error;
-      
+
       setProfile(data);
       setPhotoUrl(data.photo || null);
 
@@ -239,13 +239,15 @@ const Onboarding = () => {
           .from('profiles')
           .update({ is_invited_user: isExternal })
           .eq('id', userId);
-        
+
         // Update local state
         setProfile({ ...data, is_invited_user: isExternal });
       }
 
-      // If user already has a photo, onboarding is complete
+      // If user already has a photo, they might be here to import calendar
       if (data.photo) {
+        setStep('calendar');
+
         // If there's an invite token, process it immediately using passed-in details
         const inviteToProcess = currentInviteDetails || inviteDetails;
         if (inviteToken && inviteToProcess) {
@@ -263,20 +265,17 @@ const Onboarding = () => {
             }
           }
         }
-        
+
         // If invite token exists but details not loaded yet, redirect to my-rides
         if (inviteToken) {
           console.log('Invite token exists but details not loaded, redirecting to my-rides');
           navigate("/my-rides");
           return;
         }
-        
-        // Otherwise redirect appropriately
-        if (isExternal) {
-          navigate("/my-rides");
-        } else {
-          navigate("/events");
-        }
+
+        // We do NOT redirect automatically here anymore, so users can do the calendar step.
+        // Unless they explicitly want to skip? 
+        // The "Skip for now" button in the UI handles the redirect.
       }
     } catch (error: any) {
       toast.error("Failed to load profile");
@@ -356,14 +355,14 @@ const Onboarding = () => {
     }
 
     // If we are in calendar step, we can proceed
-    
+
     try {
       // Process invite token if present
       if (inviteToken && inviteDetails) {
         const joined = await processInviteJoin();
         if (joined) {
           let eventId = inviteDetails.ride_groups?.event_id;
-          
+
           if (!eventId && inviteDetails.ride_id) {
             const { data: rideData } = await supabase
               .from('ride_groups')
@@ -372,7 +371,7 @@ const Onboarding = () => {
               .single();
             eventId = rideData?.event_id;
           }
-          
+
           if (eventId) {
             navigate(`/events/${eventId}`);
           } else {
@@ -384,7 +383,7 @@ const Onboarding = () => {
 
       // Check if external user
       const isExternalUser = !profile.email?.toLowerCase().endsWith('@berkeley.edu');
-      
+
       // Priority 1 - Check for upcoming rides
       const { data: upcomingRides } = await supabase
         .from('ride_members')
@@ -398,18 +397,18 @@ const Onboarding = () => {
         .eq('user_id', profile.id)
         .gte('ride_groups.departure_time', new Date().toISOString())
         .limit(1);
-      
+
       if (upcomingRides && upcomingRides.length > 0) {
         navigate('/my-rides');
         return;
       }
-      
+
       // Priority 2 - External users always go to My Rides
       if (isExternalUser) {
         navigate('/my-rides');
         return;
       }
-      
+
       // Priority 3 - Berkeley users go to Events (which will be My Events)
       navigate("/events");
     } catch (error) {
@@ -434,8 +433,8 @@ const Onboarding = () => {
             {step === 'photo' ? 'Welcome!' : 'Sync Your Schedule'}
           </h2>
           <p className="text-muted-foreground">
-            {step === 'photo' 
-              ? 'One last step - add your profile photo' 
+            {step === 'photo'
+              ? 'One last step - add your profile photo'
               : 'Import your calendar to find rides for your events'}
           </p>
         </div>
@@ -482,9 +481,9 @@ const Onboarding = () => {
                 </div>
 
                 <label htmlFor="photo-upload" className="w-full">
-                  <Button 
+                  <Button
                     type="button"
-                    variant="outline" 
+                    variant="outline"
                     size="lg"
                     disabled={uploading}
                     className="w-full"
@@ -549,7 +548,7 @@ const Onboarding = () => {
                   <Upload className="w-4 h-4 mr-2" />
                   Import from .ICS File
                 </Button>
-                
+
                 <Button
                   onClick={handleCompleteSetup}
                   variant="ghost"
