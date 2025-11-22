@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Calendar as CalendarIcon, Search, ChevronDown } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Search, ChevronDown, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Navigation } from "@/components/Navigation";
 import { EventCard } from "@/components/EventCard";
@@ -47,7 +47,7 @@ const Events = () => {
   // Redirect external users
   useEffect(() => {
     if (authLoading) return;
-    
+
     if (isExternalUser) {
       toast.error("You don't have access to browse events. You can only see rides you've been invited to.");
       navigate('/my-rides');
@@ -74,7 +74,7 @@ const Events = () => {
       }
 
       setUser(session.user);
-      fetchEvents();
+      fetchEvents(session.user.id);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -87,131 +87,81 @@ const Events = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const fetchEvents = async (searchTerm = "") => {
-    try {
-      if (searchTerm.trim()) {
-        // Use PostgreSQL full-text search
-        const { data, error } = await supabase
-          .rpc('search_events', { 
-            search_query: searchTerm 
-          });
-        
-        if (error) throw error;
-        
-        // Fetch counts separately for search results
-        const eventIds = data?.map(e => e.id) || [];
-        if (eventIds.length > 0) {
-          const { data: rideGroups } = await supabase
-            .from('ride_groups')
-            .select('event_id, ride_members(count)')
-            .in('event_id', eventIds);
-          
-          const groupCountMap: Record<string, number> = {};
-          const memberCountMap: Record<string, number> = {};
-          
-          rideGroups?.forEach(rg => {
-            groupCountMap[rg.event_id] = (groupCountMap[rg.event_id] || 0) + 1;
-            memberCountMap[rg.event_id] = (memberCountMap[rg.event_id] || 0) + (rg.ride_members?.[0]?.count || 0);
-          });
-          
-          const eventsWithCounts = data?.map(e => ({
-            ...e,
-            ride_group_count: groupCountMap[e.id] || 0,
-            member_count: memberCountMap[e.id] || 0
-          })) || [];
-          
-          setEvents(eventsWithCounts);
-        } else {
-          setEvents([]);
-        }
-      } else {
-        // No search term - fetch all events with ride group counts
-        const { data, error } = await supabase
-          .from('events')
-          .select('*')
-          .order('date_time', { ascending: true });
-
-        if (error) throw error;
-        
-        // Fetch counts for all events
-        const eventIds = data?.map(e => e.id) || [];
-        if (eventIds.length > 0) {
-          const { data: rideGroups } = await supabase
-            .from('ride_groups')
-            .select('event_id, ride_members(count)')
-            .in('event_id', eventIds);
-          
-          const groupCountMap: Record<string, number> = {};
-          const memberCountMap: Record<string, number> = {};
-          
-          rideGroups?.forEach(rg => {
-            groupCountMap[rg.event_id] = (groupCountMap[rg.event_id] || 0) + 1;
-            memberCountMap[rg.event_id] = (memberCountMap[rg.event_id] || 0) + (rg.ride_members?.[0]?.count || 0);
-          });
-          
-          const eventsWithCounts = data?.map(e => ({
-            ...e,
-            ride_group_count: groupCountMap[e.id] || 0,
-            member_count: memberCountMap[e.id] || 0
-          })) || [];
-          
-          setEvents(eventsWithCounts);
-        } else {
-          setEvents([]);
-        }
-      }
-    } catch (error: any) {
-      toast.error("Failed to load events");
-    } finally {
-      setLoading(false);
+  // Effect to handle date filter changes
+  useEffect(() => {
+    if (user) {
+      fetchEvents(user.id, searchQuery, dateFilter);
     }
-  };
+  }, [dateFilter]);
 
-  const fetchEventsByDate = async (date: Date) => {
+  const fetchEvents = async (userId: string, searchTerm = "", date: Date | undefined = dateFilter) => {
     try {
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      const { data, error } = await supabase
+      setLoading(true);
+
+      // 1. Get IDs of events the user has access to (joined rides)
+      const { data: accessData } = await supabase
+        .from('event_access')
+        .select('event_id')
+        .eq('user_id', userId);
+
+      const accessEventIds = accessData?.map(a => a.event_id) || [];
+
+      // 2. Build query
+      let query = supabase
         .from('events')
         .select('*')
-        .gte('date_time', startOfDay.toISOString())
-        .lte('date_time', endOfDay.toISOString())
         .order('date_time', { ascending: true });
 
+      // Filter: Created by me OR I have access
+      const orCondition = `created_by.eq.${userId}${accessEventIds.length > 0 ? `,id.in.(${accessEventIds.join(',')})` : ''}`;
+      query = query.or(orCondition);
+
+      if (searchTerm.trim()) {
+        query = query.ilike('name', `%${searchTerm}%`);
+      }
+
+      if (date) {
+        const startOfDay = new Date(date);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
+        query = query.gte('date_time', startOfDay.toISOString())
+          .lte('date_time', endOfDay.toISOString());
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
-      
-      // Fetch counts
+
+      // Fetch counts for these events
       const eventIds = data?.map(e => e.id) || [];
       if (eventIds.length > 0) {
         const { data: rideGroups } = await supabase
           .from('ride_groups')
           .select('event_id, ride_members(count)')
           .in('event_id', eventIds);
-        
+
         const groupCountMap: Record<string, number> = {};
         const memberCountMap: Record<string, number> = {};
-        
+
         rideGroups?.forEach(rg => {
           groupCountMap[rg.event_id] = (groupCountMap[rg.event_id] || 0) + 1;
           memberCountMap[rg.event_id] = (memberCountMap[rg.event_id] || 0) + (rg.ride_members?.[0]?.count || 0);
         });
-        
+
         const eventsWithCounts = data?.map(e => ({
           ...e,
           ride_group_count: groupCountMap[e.id] || 0,
           member_count: memberCountMap[e.id] || 0
         })) || [];
-        
+
         setEvents(eventsWithCounts);
       } else {
         setEvents([]);
       }
     } catch (error: any) {
-      toast.error("Failed to filter events by date");
+      console.error("Error fetching events:", error);
+      toast.error("Failed to load events");
     } finally {
       setLoading(false);
     }
@@ -221,9 +171,9 @@ const Events = () => {
     const now = new Date();
     const upcomingEvents = events.filter(e => new Date(e.date_time) >= now);
     const pastEvents = events.filter(e => new Date(e.date_time) < now);
-    
+
     const sortedEvents = [...upcomingEvents, ...pastEvents];
-    
+
     const grouped = sortedEvents.reduce((acc, event) => {
       const dateKey = format(new Date(event.date_time), 'EEEE, MMMM d, yyyy');
       if (!acc[dateKey]) {
@@ -232,17 +182,16 @@ const Events = () => {
       acc[dateKey].push(event);
       return acc;
     }, {} as Record<string, Event[]>);
-    
+
     return Object.entries(grouped);
   };
 
   // Debounce search to avoid too many queries
   const debouncedSearch = useCallback(
     debounce((query: string) => {
-      setLoading(true);
-      fetchEvents(query);
+      if (user) fetchEvents(user.id, query);
     }, 300),
-    []
+    [user]
   );
 
   return (
@@ -251,26 +200,26 @@ const Events = () => {
         <div className="space-y-4 mb-6">
           {/* Title always on top */}
           <div className="text-center md:text-left">
-            <h1 className="text-3xl font-bold text-primary">Upcoming Events</h1>
-            <p className="text-muted-foreground mt-1">Find rides to off-campus events</p>
+            <h1 className="text-3xl font-bold text-primary">My Events</h1>
+            <p className="text-muted-foreground mt-1">Events from your calendar and rides you've joined</p>
           </div>
-          
+
           {/* Search, date filter, and create button on same row below title */}
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
-                placeholder="Search events by name, destination, or city..."
+                placeholder="Search your events..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setDateFilter(undefined);
+                  // setDateFilter(undefined); // Don't clear date filter on search? Or should we?
                   debouncedSearch(e.target.value);
                 }}
                 className="pl-10"
               />
             </div>
-            
+
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full sm:w-auto">
@@ -282,27 +231,17 @@ const Events = () => {
                 <Calendar
                   mode="single"
                   selected={dateFilter}
-                  onSelect={(date) => {
-                    setDateFilter(date);
-                    setSearchQuery("");
-                    if (date) {
-                      setLoading(true);
-                      fetchEventsByDate(date);
-                    } else {
-                      setLoading(true);
-                      fetchEvents();
-                    }
-                  }}
+                  onSelect={setDateFilter}
                   className="pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="w-full sm:w-auto">
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Event
+                  Add Event
                   <ChevronDown className="w-4 h-4 ml-2" />
                 </Button>
               </DropdownMenuTrigger>
@@ -313,7 +252,7 @@ const Events = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setCreateDialogOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Event Manually
+                  Create Manually
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -326,15 +265,20 @@ const Events = () => {
               <div key={i} className="h-32 bg-muted rounded-lg animate-pulse" />
             ))}
           </div>
-        ) : events.length === 0 && !searchQuery ? (
+        ) : events.length === 0 && !searchQuery && !dateFilter ? (
           <div className="text-center py-12 space-y-4">
-            <div className="text-6xl mb-4">🎫</div>
+            <div className="p-6 bg-primary/10 rounded-full w-24 h-24 mx-auto flex items-center justify-center mb-4">
+              <CalendarIcon className="w-12 h-12 text-primary" />
+            </div>
             <div>
-              <p className="font-medium text-lg mb-2">No Events Available</p>
-              <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                You don't have access to any events yet. Berkeley students can create events, 
-                or join rides you've been invited to.
+              <h3 className="font-semibold text-xl mb-2">No Events Found</h3>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6">
+                Import your calendar to automatically match with other students going to the same events.
               </p>
+              <Button onClick={() => setImportDialogOpen(true)} size="lg">
+                <Upload className="w-4 h-4 mr-2" />
+                Import Calendar
+              </Button>
             </div>
           </div>
         ) : events.length === 0 && (searchQuery || dateFilter) ? (
@@ -345,8 +289,7 @@ const Events = () => {
             <Button onClick={() => {
               setSearchQuery("");
               setDateFilter(undefined);
-              setLoading(true);
-              fetchEvents();
+              if (user) fetchEvents(user.id, "", undefined);
             }} variant="outline">
               Clear filters
             </Button>
@@ -373,13 +316,13 @@ const Events = () => {
       <CreateEventDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
-        onEventCreated={fetchEvents}
+        onEventCreated={() => user && fetchEvents(user.id)}
       />
 
       <ImportCalendarDialog
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
-        onEventsImported={fetchEvents}
+        onEventsImported={() => user && fetchEvents(user.id)}
       />
 
       <Navigation />

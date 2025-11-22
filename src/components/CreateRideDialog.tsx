@@ -19,6 +19,7 @@ interface CreateRideDialogProps {
   eventId: string;
   eventDate?: string;
   onRideCreated: () => void;
+  initialInvitees?: string[];
 }
 
 const calculateDefaultTime = (eventDate: string): string => {
@@ -65,7 +66,7 @@ export const CreateRideDialog = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.date || !formData.time) {
       toast.error("Please fill in all fields");
       return;
@@ -121,22 +122,52 @@ export const CreateRideDialog = ({
         role: rg.travel_mode === 'Carpool (Student Driver)' ? 'driver' : null,
       }));
 
+      // Add initial invitees
+      if (initialInvitees && initialInvitees.length > 0) {
+        rideGroups.forEach(rg => {
+          initialInvitees.forEach(inviteeId => {
+            memberInserts.push({
+              ride_id: rg.id,
+              user_id: inviteeId,
+              status: 'invited',
+              role: null
+            });
+          });
+        });
+      }
+
       const { error: memberError } = await supabase
         .from('ride_members')
         .insert(memberInserts);
 
       if (memberError) throw memberError;
 
-      const message = rideGroups.length > 1 
-        ? "Ride groups created successfully!" 
+      // Send notifications to invitees
+      if (initialInvitees && initialInvitees.length > 0) {
+        // We can do this async without awaiting to speed up UI
+        rideGroups.forEach(rg => {
+          initialInvitees.forEach(async (inviteeId) => {
+            await supabase.from('notifications').insert({
+              user_id: inviteeId,
+              ride_id: rg.id,
+              type: 'ride_invite',
+              title: 'Ride Invitation',
+              message: `You have been invited to a ride group for this event.`
+            });
+          });
+        });
+      }
+
+      const message = rideGroups.length > 1
+        ? "Ride groups created successfully!"
         : "Ride group created successfully!";
       toast.success(message);
-      
+
       onOpenChange(false);
       onRideCreated();
-      setFormData({ 
-        date: "", 
-        time: "", 
+      setFormData({
+        date: "",
+        time: "",
         rideshare: false,
         carpool: false,
         rideshareCapacity: 4,
@@ -159,7 +190,7 @@ export const CreateRideDialog = ({
             Set up a new ride group for this event
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -189,8 +220,8 @@ export const CreateRideDialog = ({
             <div className="mt-2 space-y-3">
               <div className="space-y-1">
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="rideshare" 
+                  <Checkbox
+                    id="rideshare"
                     checked={formData.rideshare}
                     onCheckedChange={(checked) => setFormData({ ...formData, rideshare: checked as boolean })}
                   />
@@ -204,8 +235,8 @@ export const CreateRideDialog = ({
               </div>
               <div className="space-y-1">
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="carpool" 
+                  <Checkbox
+                    id="carpool"
                     checked={formData.carpool}
                     onCheckedChange={(checked) => setFormData({ ...formData, carpool: checked as boolean })}
                   />
@@ -214,8 +245,8 @@ export const CreateRideDialog = ({
                   </Label>
                 </div>
                 <p className="text-xs text-muted-foreground ml-6">
-                  {formData.carpool 
-                    ? "✓ You'll be the driver for this ride" 
+                  {formData.carpool
+                    ? "✓ You'll be the driver for this ride"
                     : "You'll drive your car and offer rides"}
                 </p>
               </div>
@@ -230,8 +261,8 @@ export const CreateRideDialog = ({
                 type="number"
                 min="1"
                 value={formData.rideshareCapacity}
-                onChange={(e) => setFormData({ 
-                  ...formData, 
+                onChange={(e) => setFormData({
+                  ...formData,
                   rideshareCapacity: Math.max(1, parseInt(e.target.value) || 1)
                 })}
                 className="mt-1"
@@ -251,8 +282,8 @@ export const CreateRideDialog = ({
                   type="number"
                   min="1"
                   value={formData.maxCapacity}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
+                  onChange={(e) => setFormData({
+                    ...formData,
                     maxCapacity: Math.max(1, parseInt(e.target.value) || 1),
                     minCapacity: Math.min(formData.minCapacity, parseInt(e.target.value) || 1)
                   })}
@@ -267,8 +298,8 @@ export const CreateRideDialog = ({
                   min="1"
                   max={formData.maxCapacity}
                   value={formData.minCapacity}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
+                  onChange={(e) => setFormData({
+                    ...formData,
                     minCapacity: Math.max(1, Math.min(formData.maxCapacity, parseInt(e.target.value) || 1))
                   })}
                   className="mt-1"

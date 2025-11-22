@@ -83,7 +83,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
   const isFull = rideGroup.ride_members.length >= rideGroup.capacity;
   const canDeleteRide = rideGroup.ride_members.length <= 1 && (isAdmin || isMember);
   const isCreator = currentUserId === rideGroup.created_by;
-  const driver = members.find(m => 
+  const driver = members.find(m =>
     rideGroup.ride_members.find(rm => rm.user_id === m.id && rm.role === 'driver')
   );
   const isCarpool = rideGroup.travel_mode === 'Carpool (Student Driver)';
@@ -129,11 +129,11 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
         .in('id', memberIds);
 
       if (error) throw error;
-      
+
       // Create placeholder profiles for members not in public_profiles
       const fetchedIds = data?.map(p => p.id) || [];
       const missingIds = memberIds.filter(id => !fetchedIds.includes(id));
-      
+
       const placeholderProfiles = missingIds.map(id => ({
         id,
         name: 'User',
@@ -141,7 +141,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
         program: 'Unknown',
         created_at: new Date().toISOString()
       }));
-      
+
       setMembers([...(data || []), ...placeholderProfiles]);
     } catch (error: any) {
       console.error("Failed to load members:", error);
@@ -160,21 +160,21 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
       data?.forEach(v => {
         counts[v.vote_option] = (counts[v.vote_option] || 0) + 1;
       });
-      
+
       console.log('Vote counts:', counts);
-      
+
       const entries = Object.entries(counts);
       if (entries.length === 0) {
         setLeaderMeetingPoint(null);
         return;
       }
-      
+
       const maxVotes = Math.max(...entries.map(([_, count]) => count));
       const winners = entries
         .filter(([_, count]) => count === maxVotes)
         .map(([option]) => option)
         .sort(); // Sort alphabetically for consistency
-      
+
       const result = winners.join(' OR ');
       console.log('Winners with max votes:', winners, 'Result:', result);
       setLeaderMeetingPoint(result);
@@ -185,7 +185,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
 
   const handleJoinRide = async () => {
     if (!currentUserId) return;
-    
+
     try {
       setLoading(true);
 
@@ -226,7 +226,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
       }
 
       const role = isCarpool ? 'rider' : null;
-      
+
       const { error } = await supabase.from('ride_members').insert({
         ride_id: rideGroup.id,
         user_id: currentUserId,
@@ -286,8 +286,8 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
         }
       }
 
-      const message = role === 'rider' 
-        ? `Joined as rider in ${driver?.name}'s ride!` 
+      const message = role === 'rider'
+        ? `Joined as rider in ${driver?.name}'s ride!`
         : "Joined ride group!";
       toast.success(message);
       onUpdate();
@@ -300,10 +300,10 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
 
   const handleLeaveRide = async () => {
     if (!currentUserId) return;
-    
+
     try {
       setLoading(true);
-      
+
       // Notify other members
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -366,7 +366,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
   const handleDeleteRide = async () => {
     try {
       setLoading(true);
-      
+
       // Notify all members before deletion
       const memberIds = rideGroup.ride_members.map(m => m.user_id);
       const { data: memberEmails } = await supabase
@@ -391,9 +391,9 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
         .from('ride_members')
         .delete()
         .eq('ride_id', rideGroup.id);
-      
+
       if (memberError) throw memberError;
-      
+
       // Then delete the ride group
       const { error } = await supabase
         .from('ride_groups')
@@ -425,7 +425,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
             </Badge>
             <Badge variant="outline">
               <Users className="w-3 h-3 mr-1" />
-              {isCarpool 
+              {isCarpool
                 ? `${passengerCount} passenger${passengerCount !== 1 ? 's' : ''} + driver`
                 : `${rideGroup.ride_members.length}/${rideGroup.capacity}`
               }
@@ -454,13 +454,13 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {(leaderMeetingPoint || rideGroup.meeting_point) && (
           <div className="flex items-center gap-2 text-sm text-primary font-medium p-3 bg-primary/5 rounded-lg">
             <MapPin className="w-4 h-4" />
             <span>Meeting Point: </span>
-            <a 
+            <a
               href={`https://www.google.com/maps?q=${encodeURIComponent(leaderMeetingPoint ?? rideGroup.meeting_point ?? '')}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -551,9 +551,17 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
                 Vote Meeting Point
               </Button>
               <Button
-                onClick={() => setShowChat(true)}
+                onClick={() => {
+                  // Mock WhatsApp Group Link
+                  // In a real app, this would be fetched from the DB (created via API)
+                  const text = `Join my ride to ${event.name} at ${format(new Date(rideGroup.departure_time), 'h:mm a')}!`;
+                  const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+                  window.open(url, '_blank');
+                  toast.success("Opening WhatsApp Group...");
+                }}
                 variant="outline"
-                title="Chat with group"
+                title="Open WhatsApp Group"
+                className="text-green-600 border-green-200 hover:bg-green-50"
               >
                 <MessageCircle className="w-4 h-4" />
               </Button>
@@ -693,7 +701,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
           <AlertDialogHeader>
             <AlertDialogTitle>Complete Ride?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will open the attendance survey where you can confirm who attended the ride. 
+              This will open the attendance survey where you can confirm who attended the ride.
               This is typically done automatically 24 hours after the ride, but you can complete it manually now.
             </AlertDialogDescription>
           </AlertDialogHeader>

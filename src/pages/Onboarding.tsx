@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import { Upload, User } from "lucide-react";
 import { PhotoEditorDialog } from "@/components/PhotoEditorDialog";
 
-
+import { ImportCalendarDialog } from "@/components/ImportCalendarDialog";
+import { Calendar } from "lucide-react";
 const Onboarding = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
@@ -18,6 +19,8 @@ const Onboarding = () => {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [inviteDetails, setInviteDetails] = useState<any>(null);
+  const [step, setStep] = useState<'photo' | 'calendar'>('photo');
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   useEffect(() => {
     const initializeOnboarding = async () => {
@@ -335,6 +338,8 @@ const Onboarding = () => {
       setEditorOpen(false);
       setSelectedFile(null);
       toast.success("Profile photo added successfully");
+      // Move to calendar step instead of completing immediately
+      setStep('calendar');
     } catch (error: any) {
       console.error('Upload error:', error);
       toast.error("Failed to upload photo");
@@ -344,10 +349,13 @@ const Onboarding = () => {
   };
 
   const handleCompleteSetup = async () => {
-    if (!photoUrl) {
-      toast.error("Please upload a profile photo to continue");
+    // If we are in photo step and have a photo, move to calendar
+    if (step === 'photo' && photoUrl) {
+      setStep('calendar');
       return;
     }
+
+    // If we are in calendar step, we can proceed
     
     try {
       // Process invite token if present
@@ -402,7 +410,7 @@ const Onboarding = () => {
         return;
       }
       
-      // Priority 3 - Berkeley users go to Events
+      // Priority 3 - Berkeley users go to Events (which will be My Events)
       navigate("/events");
     } catch (error) {
       console.error('Error determining route:', error);
@@ -422,8 +430,14 @@ const Onboarding = () => {
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-4">
-          <h2 className="text-3xl font-bold text-primary">Welcome!</h2>
-          <p className="text-muted-foreground">One last step - add your profile photo</p>
+          <h2 className="text-3xl font-bold text-primary">
+            {step === 'photo' ? 'Welcome!' : 'Sync Your Schedule'}
+          </h2>
+          <p className="text-muted-foreground">
+            {step === 'photo' 
+              ? 'One last step - add your profile photo' 
+              : 'Import your calendar to find rides for your events'}
+          </p>
         </div>
 
         {inviteDetails && (
@@ -440,74 +454,120 @@ const Onboarding = () => {
           </Card>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Complete Your Profile</CardTitle>
-            <CardDescription>
-              Help others recognize you in ride groups by adding a profile photo
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex flex-col items-center gap-4">
-              <Avatar className="w-32 h-32 ring-4 ring-primary/20">
-                <AvatarImage src={photoUrl || undefined} alt={profile.name} />
-                <AvatarFallback className="text-4xl bg-secondary">
-                  {photoUrl ? (
-                    <User className="w-12 h-12" />
-                  ) : (
-                    profile.name?.charAt(0)?.toUpperCase() || 'U'
-                  )}
-                </AvatarFallback>
-              </Avatar>
+        {step === 'photo' ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Complete Your Profile</CardTitle>
+              <CardDescription>
+                Help others recognize you in ride groups by adding a profile photo
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex flex-col items-center gap-4">
+                <Avatar className="w-32 h-32 ring-4 ring-primary/20">
+                  <AvatarImage src={photoUrl || undefined} alt={profile.name} />
+                  <AvatarFallback className="text-4xl bg-secondary">
+                    {photoUrl ? (
+                      <User className="w-12 h-12" />
+                    ) : (
+                      profile.name?.charAt(0)?.toUpperCase() || 'U'
+                    )}
+                  </AvatarFallback>
+                </Avatar>
 
-              <div className="text-center">
-                <p className="font-medium text-lg">{profile.name}</p>
-                <p className="text-sm text-muted-foreground">{profile.email}</p>
-                <p className="text-sm text-muted-foreground">{profile.program}</p>
+                <div className="text-center">
+                  <p className="font-medium text-lg">{profile.name}</p>
+                  <p className="text-sm text-muted-foreground">{profile.email}</p>
+                  <p className="text-sm text-muted-foreground">{profile.program}</p>
+                </div>
+
+                <label htmlFor="photo-upload" className="w-full">
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    size="lg"
+                    disabled={uploading}
+                    className="w-full"
+                    asChild
+                  >
+                    <span>
+                      <Upload className="w-5 h-5 mr-2" />
+                      {uploading ? "Uploading..." : photoUrl ? "Change Photo" : "Upload Photo"}
+                    </span>
+                  </Button>
+                  <input
+                    id="photo-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoUpload}
+                    disabled={uploading}
+                  />
+                </label>
               </div>
 
-              <label htmlFor="photo-upload" className="w-full">
-                <Button 
-                  type="button"
-                  variant="outline" 
+              <Button
+                onClick={() => setStep('calendar')}
+                disabled={!photoUrl || uploading}
+                size="lg"
+                className="w-full"
+              >
+                Continue
+              </Button>
+
+              {!photoUrl && (
+                <p className="text-sm text-center text-muted-foreground">
+                  A profile photo is required to continue
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Import Calendar</CardTitle>
+              <CardDescription>
+                Connect your calendar to automatically find rides for your upcoming events.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex flex-col items-center gap-4 py-6">
+                <div className="p-4 bg-primary/10 rounded-full">
+                  <Calendar className="w-12 h-12 text-primary" />
+                </div>
+                <p className="text-center text-sm text-muted-foreground">
+                  We'll scan your calendar for events and match you with other students going to the same places.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <Button
+                  onClick={() => setImportDialogOpen(true)}
                   size="lg"
-                  disabled={uploading}
                   className="w-full"
-                  asChild
                 >
-                  <span>
-                    <Upload className="w-5 h-5 mr-2" />
-                    {uploading ? "Uploading..." : photoUrl ? "Change Photo" : "Upload Photo"}
-                  </span>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import from .ICS File
                 </Button>
-                <input
-                  id="photo-upload"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handlePhotoUpload}
-                  disabled={uploading}
-                />
-              </label>
-            </div>
-
-            <Button
-              onClick={handleCompleteSetup}
-              disabled={!photoUrl || uploading}
-              size="lg"
-              className="w-full"
-            >
-              Complete Setup
-            </Button>
-
-            {!photoUrl && (
-              <p className="text-sm text-center text-muted-foreground">
-                A profile photo is required to continue
-              </p>
-            )}
-          </CardContent>
-        </Card>
+                
+                <Button
+                  onClick={handleCompleteSetup}
+                  variant="ghost"
+                  className="w-full"
+                >
+                  Skip for now
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      <ImportCalendarDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        onEventsImported={handleCompleteSetup}
+      />
 
       <PhotoEditorDialog
         open={editorOpen}
