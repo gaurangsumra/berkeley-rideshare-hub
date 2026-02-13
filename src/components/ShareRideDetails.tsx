@@ -5,7 +5,7 @@ import { Share2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_FUNCTIONS_URL } from "@/integrations/supabase/client";
 
 interface Profile {
   id: string;
@@ -51,8 +51,7 @@ export const ShareRideDetails = ({ rideId, event, ride, members, driver, open: e
         return;
       }
 
-      const functionsUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL;
-      const res = await fetch(`${functionsUrl}/send-ride-invite`, {
+      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/send-ride-invite`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,

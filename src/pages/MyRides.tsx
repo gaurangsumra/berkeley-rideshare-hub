@@ -262,11 +262,11 @@ const MyRides = () => {
 
       // Filter out surveys where user already responded
       const filtered = data?.filter(survey => {
-        const responses = survey.ride_attendance_responses as any[];
+        const responses = survey.ride_attendance_responses as { respondent_user_id: string }[];
         return !responses?.some(r => r.respondent_user_id === userId);
       }) || [];
 
-      setPendingSurveys(filtered as any);
+      setPendingSurveys(filtered as PendingSurvey[]);
     } catch (error) {
       toast.error("Failed to load pending surveys");
     }

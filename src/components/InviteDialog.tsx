@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Mail, Link2, Copy, Check } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_FUNCTIONS_URL } from "@/integrations/supabase/client";
 
 interface InviteDialogProps {
   open: boolean;
@@ -43,8 +43,7 @@ export const InviteDialog = ({ open, onOpenChange, rideId }: InviteDialogProps) 
         return;
       }
 
-      const functionsUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL;
-      const res = await fetch(`${functionsUrl}/send-ride-invite`, {
+      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/send-ride-invite`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -93,8 +92,7 @@ export const InviteDialog = ({ open, onOpenChange, rideId }: InviteDialogProps) 
         return;
       }
 
-      const functionsUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL;
-      const res = await fetch(`${functionsUrl}/send-ride-invite`, {
+      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/send-ride-invite`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
