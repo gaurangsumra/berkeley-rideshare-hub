@@ -101,7 +101,7 @@ export const AttendanceSurveyDialog = ({
       if (membersError) throw membersError;
 
       setMembers(membersData || []);
-    } catch (error: any) {
+    } catch (error) {
       toast.error('Failed to load survey');
     } finally {
       setLoading(false);
@@ -188,8 +188,8 @@ export const AttendanceSurveyDialog = ({
       toast.success('Response submitted successfully');
       onOpenChange(false);
       onSubmitted?.();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to submit response');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to submit response');
     } finally {
       setSubmitting(false);
     }

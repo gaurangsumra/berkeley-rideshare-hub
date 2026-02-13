@@ -166,7 +166,7 @@ const Auth = () => {
       }
       
       toast.success("You've been invited to join a ride! Please sign in to continue.");
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to validate invite link");
     }
   };
@@ -215,8 +215,8 @@ const Auth = () => {
       setPassword("");
       setName("");
       setProgram("");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to sign up");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to sign up");
     } finally {
       setLoading(false);
     }
@@ -248,7 +248,7 @@ const Auth = () => {
         toast.success("Signed in successfully!");
         navigate(route);
       }
-    } catch (error: any) {
+    } catch (error) {
       // Error already handled above
     } finally {
       setLoading(false);
@@ -298,8 +298,8 @@ const Auth = () => {
       });
       
       if (error) throw error;
-    } catch (error: any) {
-      toast.error(error.message || "Failed to sign in with Google");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to sign in with Google");
       setLoading(false);
     }
   };

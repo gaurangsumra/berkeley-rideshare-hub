@@ -63,7 +63,7 @@ export const MeetingPointVoting = ({
       setOptions(Array.from(allOptions));
       setVotes(voteCounts);
       setMyVotes(userVotes);
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to load votes");
     }
   };
@@ -109,7 +109,7 @@ export const MeetingPointVoting = ({
       
       // Auto-update meeting point to highest voted option
       await autoUpdateMeetingPoint();
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to update vote");
     } finally {
       setLoading(false);
@@ -172,7 +172,7 @@ export const MeetingPointVoting = ({
         toast.success(`Meeting point updated to: ${winner[0]}`);
         onUpdate();
       }
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to update meeting point automatically");
     }
   };
@@ -195,7 +195,7 @@ export const MeetingPointVoting = ({
       toast.success(`Meeting point set to: ${winner[0]}`);
       onUpdate();
       onClose();
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to set meeting point");
     } finally {
       setLoading(false);

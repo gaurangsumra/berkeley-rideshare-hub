@@ -70,12 +70,17 @@ export const UberPaymentDialog = ({
       return;
     }
 
+    if (!currentUserId) {
+      toast.error("You must be logged in to submit a payment");
+      return;
+    }
+
     try {
       const splitAmount = parseFloat(amount) / members.length;
-      
+
       const { error } = await supabase.from('uber_payments').insert({
         ride_id: rideId,
-        payer_user_id: currentUserId!,
+        payer_user_id: currentUserId,
         amount: parseFloat(amount),
         venmo_link: `https://venmo.com`,
       });
@@ -87,7 +92,7 @@ export const UberPaymentDialog = ({
       const { data: profile } = await supabase
         .from('profiles')
         .select('name, email')
-        .eq('id', currentUserId!)
+        .eq('id', currentUserId)
         .single();
 
       const { data: memberEmails } = await supabase
@@ -109,7 +114,7 @@ export const UberPaymentDialog = ({
       }
 
       setStep('show-split');
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to record payment");
     }
   };

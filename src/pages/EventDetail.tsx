@@ -131,7 +131,7 @@ const EventDetail = () => {
 
       setOtherAttendees(attendees);
 
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to load event details");
     } finally {
       setLoading(false);
@@ -152,8 +152,8 @@ const EventDetail = () => {
 
       toast.success("Event deleted successfully");
       navigate("/events");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete event");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete event");
     } finally {
       setDeleting(false);
       setDeleteDialogOpen(false);

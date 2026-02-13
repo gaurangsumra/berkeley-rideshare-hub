@@ -80,8 +80,8 @@ export const PaymentConfirmationCard = ({
 
       toast.success('Payment confirmed! Thank you.');
       onConfirmed();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to confirm payment');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to confirm payment');
     } finally {
       setConfirming(false);
     }

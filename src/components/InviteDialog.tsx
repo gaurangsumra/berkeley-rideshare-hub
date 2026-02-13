@@ -76,8 +76,8 @@ export const InviteDialog = ({ open, onOpenChange, rideId }: InviteDialogProps) 
         setSuccess(false);
         onOpenChange(false);
       }, 2000);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to send invite");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send invite");
     } finally {
       setLoading(false);
     }
@@ -116,8 +116,8 @@ export const InviteDialog = ({ open, onOpenChange, rideId }: InviteDialogProps) 
 
       setInviteLink(data.inviteLink);
       toast.success("Invite link generated! Share it with anyone.");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to generate invite link");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to generate invite link");
     } finally {
       setLoading(false);
     }

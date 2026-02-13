@@ -83,7 +83,7 @@ export const RideMembershipTable = () => {
 
       setMemberships(formatted);
       setFilteredMemberships(formatted);
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to load ride membership data");
     } finally {
       setLoading(false);

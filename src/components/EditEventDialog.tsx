@@ -92,8 +92,8 @@ export const EditEventDialog = ({
       toast.success("Event updated successfully!");
       onOpenChange(false);
       onEventUpdated();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update event");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update event");
     } finally {
       setLoading(false);
     }

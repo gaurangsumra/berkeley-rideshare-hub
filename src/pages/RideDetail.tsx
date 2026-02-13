@@ -166,7 +166,7 @@ const RideDetail = () => {
           setMembers(membersWithRoles);
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to load ride details");
     } finally {
       setLoading(false);
@@ -264,8 +264,8 @@ const RideDetail = () => {
 
       toast.success("Joined ride group!");
       fetchRideData();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to join ride");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to join ride");
     } finally {
       setActionLoading(false);
     }
@@ -288,8 +288,8 @@ const RideDetail = () => {
       toast.success("Left ride group");
       setShowLeaveDialog(false);
       fetchRideData();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to leave ride");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to leave ride");
     } finally {
       setActionLoading(false);
     }
@@ -317,8 +317,8 @@ const RideDetail = () => {
 
       toast.success("Ride group deleted");
       navigate(`/events/${event?.id || ''}`);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete ride group");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete ride group");
     } finally {
       setActionLoading(false);
       setShowDeleteDialog(false);

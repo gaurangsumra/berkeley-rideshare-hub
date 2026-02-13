@@ -175,8 +175,8 @@ export const CreateRideDialog = ({
         maxCapacity: 3,
         minCapacity: 1,
       });
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create ride group");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create ride group");
     } finally {
       setLoading(false);
     }

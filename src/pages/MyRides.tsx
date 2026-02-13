@@ -184,7 +184,7 @@ const MyRides = () => {
         .sort((a, b) => new Date(a.departure_time).getTime() - new Date(b.departure_time).getTime()) || [];
 
       setRides(formattedRides);
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to load your rides");
     } finally {
       setLoading(false);
@@ -233,7 +233,7 @@ const MyRides = () => {
       })) || [];
       
       setPendingPayments(pending);
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to load pending payments");
     }
   };
@@ -267,7 +267,7 @@ const MyRides = () => {
       }) || [];
 
       setPendingSurveys(filtered as any);
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to load pending surveys");
     }
   };

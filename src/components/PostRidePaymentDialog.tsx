@@ -70,7 +70,7 @@ export const PostRidePaymentDialog = ({
       } else {
         setShowVenmoDialog(true);
       }
-    } catch (error: any) {
+    } catch (error) {
       toast.error('Failed to load your profile');
     }
   };
@@ -136,8 +136,8 @@ export const PostRidePaymentDialog = ({
 
       toast.success('Payment amount recorded!');
       setStep('show-split');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to record payment');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to record payment');
     } finally {
       setSubmitting(false);
     }

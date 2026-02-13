@@ -116,7 +116,7 @@ const UserProfile = () => {
         completionRate: totalCount > 0 ? (completedCount / totalCount) * 100 : 0,
         averageRating: avgRating
       });
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to load user profile");
     } finally {
       setLoading(false);

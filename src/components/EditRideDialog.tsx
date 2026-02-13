@@ -154,8 +154,8 @@ export const EditRideDialog = ({
       toast.success("Ride updated successfully!");
       onOpenChange(false);
       onRideUpdated();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update ride");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update ride");
     } finally {
       setLoading(false);
     }

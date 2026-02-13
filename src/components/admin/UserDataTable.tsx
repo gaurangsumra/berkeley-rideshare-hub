@@ -55,7 +55,7 @@ export const UserDataTable = () => {
       if (error) throw error;
       setUsers(data || []);
       setFilteredUsers(data || []);
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to load user data");
     } finally {
       setLoading(false);

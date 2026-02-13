@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -23,8 +23,13 @@ const Admin = () => {
     );
   }
 
+  useEffect(() => {
+    if (!loading && !isAdmin) {
+      navigate("/events");
+    }
+  }, [loading, isAdmin, navigate]);
+
   if (!isAdmin) {
-    navigate("/events");
     return null;
   }
 

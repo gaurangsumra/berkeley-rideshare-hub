@@ -143,7 +143,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
       }));
 
       setMembers([...(data || []), ...placeholderProfiles]);
-    } catch (error: any) {
+    } catch (error) {
       // Failed to load members
     }
   };
@@ -288,8 +288,8 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
         : "Joined ride group!";
       toast.success(message);
       onUpdate();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to join ride");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to join ride");
     } finally {
       setLoading(false);
     }
@@ -353,8 +353,8 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
       toast.success("Left ride group");
       setShowLeaveDialog(false);
       onUpdate();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to leave ride");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to leave ride");
     } finally {
       setLoading(false);
     }
@@ -400,8 +400,8 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
       if (error) throw error;
       toast.success("Ride group deleted");
       onUpdate();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete ride group");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete ride group");
     } finally {
       setLoading(false);
       setShowDeleteDialog(false);

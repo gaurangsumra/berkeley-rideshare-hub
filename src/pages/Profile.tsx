@@ -83,7 +83,7 @@ const Profile = () => {
           }
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to load profile");
     }
   };
@@ -100,7 +100,7 @@ const Profile = () => {
 
       if (error) throw error;
       toast.success("Program updated successfully");
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to update program");
     } finally {
       setLoading(false);
@@ -119,7 +119,7 @@ const Profile = () => {
 
       if (error) throw error;
       toast.success("Venmo username updated successfully");
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to update Venmo username");
     } finally {
       setLoading(false);
@@ -191,7 +191,7 @@ const Profile = () => {
       setEditorOpen(false);
       setSelectedFile(null);
       toast.success("Profile photo updated successfully");
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to upload photo");
     } finally {
       setUploading(false);
@@ -225,7 +225,7 @@ const Profile = () => {
       setPhotoUrl(null);
       setProfile({ ...profile, photo: null });
       toast.success("Profile photo removed");
-    } catch (error: any) {
+    } catch (error) {
       toast.error("Failed to delete photo");
     } finally {
       setUploading(false);

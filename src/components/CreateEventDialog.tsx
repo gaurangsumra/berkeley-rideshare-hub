@@ -220,8 +220,8 @@ export const CreateEventDialog = ({
         maxCapacity: 3,
         minCapacity: 1,
       });
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create event");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create event");
     } finally {
       setLoading(false);
     }
