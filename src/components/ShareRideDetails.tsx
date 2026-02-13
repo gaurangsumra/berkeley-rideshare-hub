@@ -52,8 +52,8 @@ export const ShareRideDetails = ({ rideId, event, ride, members, driver, open: e
         return;
       }
 
-      const url = `https://rizftvjircbgfsamrvdf.functions.supabase.co/send-ride-invite`;
-      const res = await fetch(url, {
+      const functionsUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL;
+      const res = await fetch(`${functionsUrl}/send-ride-invite`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,

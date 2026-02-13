@@ -43,17 +43,17 @@ export const InviteDialog = ({ open, onOpenChange, rideId }: InviteDialogProps) 
         return;
       }
 
-      const url = `https://rizftvjircbgfsamrvdf.functions.supabase.co/send-ride-invite`;
-      const res = await fetch(url, {
+      const functionsUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL;
+      const res = await fetch(`${functionsUrl}/send-ride-invite`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
-          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, // optional for functions subdomain
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: JSON.stringify({ 
-          rideId, 
-          recipientEmail: email 
+        body: JSON.stringify({
+          rideId,
+          recipientEmail: email
         }),
       });
 
@@ -93,15 +93,15 @@ export const InviteDialog = ({ open, onOpenChange, rideId }: InviteDialogProps) 
         return;
       }
 
-      const url = `https://rizftvjircbgfsamrvdf.functions.supabase.co/send-ride-invite`;
-      const res = await fetch(url, {
+      const functionsUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL;
+      const res = await fetch(`${functionsUrl}/send-ride-invite`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
-          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, // optional for functions subdomain
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           rideId,
           linkOnly: true
         }),
