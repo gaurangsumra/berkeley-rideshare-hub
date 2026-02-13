@@ -28,8 +28,8 @@ export const InviteDialog = ({ open, onOpenChange, rideId }: InviteDialogProps) 
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email) || email.length > 254) {
       toast.error("Please enter a valid email address");
       return;
     }
