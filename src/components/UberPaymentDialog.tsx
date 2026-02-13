@@ -56,8 +56,17 @@ export const UberPaymentDialog = ({
   };
 
   const handleAmountSubmit = async () => {
-    if (!amount || parseFloat(amount) <= 0) {
+    const parsedAmount = parseFloat(amount);
+    if (!amount || isNaN(parsedAmount) || parsedAmount <= 0) {
       toast.error("Please enter a valid amount");
+      return;
+    }
+    if (parsedAmount > 10000) {
+      toast.error("Amount cannot exceed $10,000");
+      return;
+    }
+    if (!/^\d+(\.\d{1,2})?$/.test(amount)) {
+      toast.error("Please enter an amount with up to 2 decimal places");
       return;
     }
 

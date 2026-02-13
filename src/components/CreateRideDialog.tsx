@@ -264,7 +264,7 @@ export const CreateRideDialog = ({
                 value={formData.rideshareCapacity}
                 onChange={(e) => setFormData({
                   ...formData,
-                  rideshareCapacity: Math.max(1, parseInt(e.target.value) || 1)
+                  rideshareCapacity: Math.max(1, parseInt(e.target.value, 10) || 1)
                 })}
                 className="mt-1"
               />
@@ -285,8 +285,8 @@ export const CreateRideDialog = ({
                   value={formData.maxCapacity}
                   onChange={(e) => setFormData({
                     ...formData,
-                    maxCapacity: Math.max(1, parseInt(e.target.value) || 1),
-                    minCapacity: Math.min(formData.minCapacity, parseInt(e.target.value) || 1)
+                    maxCapacity: Math.max(1, parseInt(e.target.value, 10) || 1),
+                    minCapacity: Math.min(formData.minCapacity, parseInt(e.target.value, 10) || 1)
                   })}
                   className="mt-1"
                 />
@@ -301,7 +301,7 @@ export const CreateRideDialog = ({
                   value={formData.minCapacity}
                   onChange={(e) => setFormData({
                     ...formData,
-                    minCapacity: Math.max(1, Math.min(formData.maxCapacity, parseInt(e.target.value) || 1))
+                    minCapacity: Math.max(1, Math.min(formData.maxCapacity, parseInt(e.target.value, 10) || 1))
                   })}
                   className="mt-1"
                 />

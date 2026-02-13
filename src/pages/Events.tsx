@@ -172,7 +172,6 @@ const Events = () => {
         setEvents([]);
       }
     } catch (error) {
-      console.error("Error fetching events:", error);
       toast.error("Failed to load events");
     } finally {
       setLoading(false);

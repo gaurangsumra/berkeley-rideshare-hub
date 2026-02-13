@@ -84,7 +84,6 @@ export const RideMembershipTable = () => {
       setMemberships(formatted);
       setFilteredMemberships(formatted);
     } catch (error: any) {
-      console.error("Failed to fetch memberships:", error);
       toast.error("Failed to load ride membership data");
     } finally {
       setLoading(false);

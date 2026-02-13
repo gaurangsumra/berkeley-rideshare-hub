@@ -74,7 +74,7 @@ export const EditEventDialog = ({
     try {
       const [hours, minutes] = eventTime.split(':');
       const dateTime = new Date(eventDate);
-      dateTime.setHours(parseInt(hours), parseInt(minutes));
+      dateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10));
 
       const { error } = await supabase
         .from('events')
@@ -93,7 +93,6 @@ export const EditEventDialog = ({
       onOpenChange(false);
       onEventUpdated();
     } catch (error: any) {
-      console.error('Error updating event:', error);
       toast.error(error.message || "Failed to update event");
     } finally {
       setLoading(false);

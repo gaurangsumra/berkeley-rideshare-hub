@@ -49,7 +49,6 @@ export const RatingBadge = ({ userId, size = "small", showLabel = false }: Ratin
       const weightedRating = (avgRating * completionPercentage) / 100;
       setRating(weightedRating);
     } catch (error) {
-      console.error('Error fetching rating:', error);
       setRating(null);
     } finally {
       setLoading(false);

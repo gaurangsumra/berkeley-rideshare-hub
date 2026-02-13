@@ -89,7 +89,7 @@ export const EditRideDialog = ({
 
     const [hours, minutes] = departureTime.split(':');
     const dateTime = new Date(departureDate);
-    dateTime.setHours(parseInt(hours), parseInt(minutes));
+    dateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10));
 
     if (dateTime < new Date()) {
       toast.error("Departure time must be in the future");
@@ -155,7 +155,6 @@ export const EditRideDialog = ({
       onOpenChange(false);
       onRideUpdated();
     } catch (error: any) {
-      console.error('Error updating ride:', error);
       toast.error(error.message || "Failed to update ride");
     } finally {
       setLoading(false);
@@ -241,7 +240,7 @@ export const EditRideDialog = ({
                 type="number"
                 min={currentMemberCount}
                 value={capacity}
-                onChange={(e) => setCapacity(parseInt(e.target.value))}
+                onChange={(e) => setCapacity(parseInt(e.target.value, 10))}
                 required
               />
               <p className="text-xs text-muted-foreground">
@@ -257,7 +256,7 @@ export const EditRideDialog = ({
                 min={1}
                 max={capacity}
                 value={minCapacity}
-                onChange={(e) => setMinCapacity(parseInt(e.target.value))}
+                onChange={(e) => setMinCapacity(parseInt(e.target.value, 10))}
                 required
               />
             </div>

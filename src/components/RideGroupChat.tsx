@@ -83,7 +83,6 @@ export const RideGroupChat = ({ open, onOpenChange, rideId, rideName }: RideGrou
       .limit(100);
 
     if (error) {
-      console.error('Error fetching messages:', error);
       return;
     }
 
@@ -166,8 +165,6 @@ export const RideGroupChat = ({ open, onOpenChange, rideId, rideName }: RideGrou
               .eq('id', session.user.id)
               .single();
 
-            console.log(`Sending email notifications to ${recipientEmails.length} recipients for new chat message`);
-
             const { data, error: invokeError } = await supabase.functions.invoke('send-ride-notification', {
               body: {
                 type: 'new_chat_message',
@@ -180,14 +177,12 @@ export const RideGroupChat = ({ open, onOpenChange, rideId, rideName }: RideGrou
             });
 
             if (invokeError) {
-              console.error('Edge function invocation error:', invokeError);
               toast({
                 title: "Message sent but notifications failed",
                 description: "Your message was sent but email notifications couldn't be delivered.",
                 variant: "destructive"
               });
             } else if (data) {
-              console.log('Email notification response:', data);
               if (data.failed > 0) {
                 toast({
                   title: "Partial notification failure",
@@ -196,14 +191,9 @@ export const RideGroupChat = ({ open, onOpenChange, rideId, rideName }: RideGrou
                 });
               }
             }
-          } else {
-            console.log('No recipients with valid email addresses found');
           }
-        } else {
-          console.log('No other members in this ride group');
         }
       } catch (emailError) {
-        console.error('Failed to send email notifications:', emailError);
         toast({
           title: "Notification error",
           description: "Your message was sent but we couldn't send email notifications.",

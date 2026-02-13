@@ -93,7 +93,6 @@ const Onboarding = () => {
         .single();
 
       if (inviteError || !invite) {
-        console.error('Invite not found:', inviteError);
         toast.error("Invalid invite link");
         navigate('/auth');
         return null;
@@ -134,11 +133,8 @@ const Onboarding = () => {
       };
 
       setInviteDetails(inviteWithDetails);
-      console.log('Invite validated successfully:', inviteWithDetails);
-      console.log('Event ID from invite:', rideGroup?.event_id);
       return inviteWithDetails;
     } catch (error) {
-      console.error('Error validating invite:', error);
       toast.error("Failed to validate invite link");
       navigate('/auth');
       return null;
@@ -152,7 +148,6 @@ const Onboarding = () => {
 
     try {
       setUploading(true); // Reuse uploading state for loading UI
-      console.log('Processing invite join for ride:', inviteDetails.ride_id);
 
       // Step 1: Verify email match if invited_email is set
       if (inviteDetails.invited_email) {
@@ -176,13 +171,10 @@ const Onboarding = () => {
         .eq('id', profile.id);
 
       if (profileError) {
-        console.error('Failed to update profile:', profileError);
         toast.error("Failed to process invite");
         setUploading(false);
         return false;
       }
-
-      console.log('Profile updated with invite info');
 
       // Step 3: Check if user is already a member
       const { data: existingMember } = await supabase
@@ -225,13 +217,10 @@ const Onboarding = () => {
         });
 
       if (joinError) {
-        console.error('Join error:', joinError);
         toast.error("Failed to join ride");
         setUploading(false);
         return false;
       }
-
-      console.log('Successfully joined ride');
 
       // Step 6: Grant event access
       if (inviteDetails.ride_groups?.event_id) {
@@ -254,7 +243,6 @@ const Onboarding = () => {
       navigate(`/rides/${inviteDetails.ride_id}`);
       return true;
     } catch (error) {
-      console.error('Error processing invite:', error);
       toast.error("Failed to process invite");
       return false;
     } finally {
@@ -367,7 +355,6 @@ const Onboarding = () => {
         setStep('calendar');
       }
     } catch (error) {
-      console.error('Upload error:', error);
       toast.error("Failed to upload photo");
     } finally {
       setUploading(false);
@@ -456,7 +443,6 @@ const Onboarding = () => {
       // Priority 3 - Berkeley users go to Events (which will be My Events)
       navigate("/events");
     } catch (error) {
-      console.error('Error determining route:', error);
       navigate("/my-rides");
     }
   };

@@ -108,7 +108,7 @@ export const AnalyticsSummary = () => {
         emailsLast24h: emailsLast24h || 0,
       });
     } catch (error) {
-      console.error("Failed to fetch analytics:", error);
+      // Failed to fetch analytics
     } finally {
       setLoading(false);
     }

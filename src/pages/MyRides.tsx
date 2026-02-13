@@ -234,7 +234,7 @@ const MyRides = () => {
       
       setPendingPayments(pending);
     } catch (error: any) {
-      console.error('Error fetching pending payments:', error);
+      toast.error("Failed to load pending payments");
     }
   };
 
@@ -268,7 +268,7 @@ const MyRides = () => {
 
       setPendingSurveys(filtered as any);
     } catch (error: any) {
-      console.error('Error fetching pending surveys:', error);
+      toast.error("Failed to load pending surveys");
     }
   };
 

@@ -192,7 +192,6 @@ const Profile = () => {
       setSelectedFile(null);
       toast.success("Profile photo updated successfully");
     } catch (error: any) {
-      console.error('Upload error:', error);
       toast.error("Failed to upload photo");
     } finally {
       setUploading(false);
@@ -227,7 +226,6 @@ const Profile = () => {
       setProfile({ ...profile, photo: null });
       toast.success("Profile photo removed");
     } catch (error: any) {
-      console.error('Delete error:', error);
       toast.error("Failed to delete photo");
     } finally {
       setUploading(false);

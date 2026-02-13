@@ -117,7 +117,6 @@ const UserProfile = () => {
         averageRating: avgRating
       });
     } catch (error: any) {
-      console.error("Failed to load profile:", error);
       toast.error("Failed to load user profile");
     } finally {
       setLoading(false);

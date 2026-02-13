@@ -16,7 +16,7 @@ export const sortTimeWindows = (windows: string[]): string[] => {
     const getHourValue = (window: string) => {
       const match = window.match(/^(\d+):00 (AM|PM)/);
       if (!match) return 0;
-      let hour = parseInt(match[1]);
+      let hour = parseInt(match[1], 10);
       const period = match[2];
       if (period === 'PM' && hour !== 12) hour += 12;
       if (period === 'AM' && hour === 12) hour = 0;

@@ -167,7 +167,6 @@ const RideDetail = () => {
         }
       }
     } catch (error: any) {
-      console.error("Failed to load ride:", error);
       toast.error("Failed to load ride details");
     } finally {
       setLoading(false);
@@ -214,7 +213,7 @@ const RideDetail = () => {
 
       setLeaderMeetingPoint(winners.join(' OR '));
     } catch (error) {
-      console.error('Failed to fetch leader meeting point', error);
+      // Failed to fetch leader meeting point
     }
   };
 

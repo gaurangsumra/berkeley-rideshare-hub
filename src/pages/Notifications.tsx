@@ -79,7 +79,6 @@ const Notifications = () => {
       if (error) throw error;
       setNotifications(data || []);
     } catch (error: any) {
-      console.error("Failed to load notifications:", error);
       toast.error("Failed to load notifications");
     } finally {
       setLoading(false);
@@ -96,7 +95,7 @@ const Notifications = () => {
       if (error) throw error;
       fetchNotifications();
     } catch (error: any) {
-      console.error("Failed to mark as read:", error);
+      // Mark as read failed silently
     }
   };
 
@@ -115,7 +114,6 @@ const Notifications = () => {
       toast.success("All notifications marked as read");
       fetchNotifications();
     } catch (error: any) {
-      console.error("Failed to mark all as read:", error);
       toast.error("Failed to mark all as read");
     }
   };

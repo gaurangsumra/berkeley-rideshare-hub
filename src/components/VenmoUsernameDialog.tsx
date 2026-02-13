@@ -60,7 +60,6 @@ export const VenmoUsernameDialog = ({
       onSubmitted(trimmedUsername);
       onOpenChange(false);
     } catch (error: any) {
-      console.error('Error saving Venmo username:', error);
       toast.error(error.message || 'Failed to save Venmo username');
     } finally {
       setSubmitting(false);

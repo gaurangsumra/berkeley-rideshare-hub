@@ -81,7 +81,6 @@ export const PaymentConfirmationCard = ({
       toast.success('Payment confirmed! Thank you.');
       onConfirmed();
     } catch (error: any) {
-      console.error('Error confirming payment:', error);
       toast.error(error.message || 'Failed to confirm payment');
     } finally {
       setConfirming(false);

@@ -99,7 +99,7 @@ export const RideNotificationStats = () => {
       setStats(statsArray);
       setFilteredStats(statsArray);
     } catch (error) {
-      console.error("Failed to fetch notification stats:", error);
+      // Failed to fetch notification stats
     } finally {
       setLoading(false);
     }

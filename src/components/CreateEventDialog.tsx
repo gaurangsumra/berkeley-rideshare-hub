@@ -84,7 +84,7 @@ export const CreateEventDialog = ({
       
       setSimilarEvents(filteredData.slice(0, 3));
     } catch (error) {
-      console.error('Error searching similar events:', error);
+      // Similar event search failed silently
     } finally {
       setSearchingSimilar(false);
     }
@@ -173,22 +173,18 @@ export const CreateEventDialog = ({
       }
 
       // Create ride groups
-      console.log("Creating ride groups:", rideGroupsToCreate);
       const { data: rideGroups, error: rideError } = await supabase
         .from('ride_groups')
         .insert(rideGroupsToCreate)
         .select();
 
       if (rideError) {
-        console.error("Failed to create ride groups:", rideError);
         toast.error("Event created but failed to create ride groups. You can create them manually.");
         onOpenChange(false);
         onEventCreated();
         return;
       }
       
-      console.log("Ride groups created successfully:", rideGroups);
-
       // Add creator as member to all ride groups
       const memberInserts = rideGroups.map((rg) => ({
         ride_id: rg.id,
@@ -197,16 +193,13 @@ export const CreateEventDialog = ({
         role: rg.travel_mode === 'Carpool (Student Driver)' ? 'driver' : null,
       }));
 
-      console.log("Adding members to ride groups:", memberInserts);
       const { error: memberError } = await supabase
         .from('ride_members')
         .insert(memberInserts);
 
       if (memberError) {
-        console.error("Failed to add members to ride groups:", memberError);
         toast.error("Event and ride groups created, but failed to join. Please join manually.");
       } else {
-        console.log("Successfully joined ride groups");
         const message = rideGroups.length > 1 
           ? "Event and ride groups created successfully!" 
           : "Event and ride group created successfully!";
@@ -372,8 +365,8 @@ export const CreateEventDialog = ({
                     value={formData.maxCapacity}
                     onChange={(e) => setFormData({ 
                       ...formData, 
-                      maxCapacity: Math.max(1, Math.min(20, parseInt(e.target.value) || 1)),
-                      minCapacity: Math.min(formData.minCapacity, parseInt(e.target.value) || 1)
+                      maxCapacity: Math.max(1, Math.min(20, parseInt(e.target.value, 10) || 1)),
+                      minCapacity: Math.min(formData.minCapacity, parseInt(e.target.value, 10) || 1)
                     })}
                     className="mt-1"
                   />
@@ -388,7 +381,7 @@ export const CreateEventDialog = ({
                     value={formData.minCapacity}
                     onChange={(e) => setFormData({ 
                       ...formData, 
-                      minCapacity: Math.max(1, Math.min(formData.maxCapacity, parseInt(e.target.value) || 1))
+                      minCapacity: Math.max(1, Math.min(formData.maxCapacity, parseInt(e.target.value, 10) || 1))
                     })}
                     className="mt-1"
                   />

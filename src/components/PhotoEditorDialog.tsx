@@ -47,7 +47,7 @@ export const PhotoEditorDialog = ({
       const croppedBlob = await getCroppedImg(imageUrl, croppedAreaPixels);
       await onSave(croppedBlob);
     } catch (error) {
-      console.error("Error cropping image:", error);
+      // Cropping error handled by caller
     } finally {
       setSaving(false);
     }

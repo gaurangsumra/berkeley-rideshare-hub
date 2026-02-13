@@ -118,20 +118,13 @@ export const MeetingPointVoting = ({
 
   const autoUpdateMeetingPoint = async () => {
     try {
-      console.log('Starting auto-update meeting point...');
-      
       // Fetch latest votes
       const { data, error } = await supabase
         .from('meeting_votes')
         .select('vote_option')
         .eq('ride_id', rideId);
 
-      if (error) {
-        console.error('Error fetching votes:', error);
-        throw error;
-      }
-
-      console.log('Vote data:', data);
+      if (error) throw error;
 
       // Calculate winner
       const voteCounts: Record<string, number> = {};
@@ -139,27 +132,17 @@ export const MeetingPointVoting = ({
         voteCounts[vote.vote_option] = (voteCounts[vote.vote_option] || 0) + 1;
       });
 
-      console.log('Vote counts:', voteCounts);
-
       const sortedOptions = Object.entries(voteCounts).sort((a, b) => b[1] - a[1]);
       const winner = sortedOptions[0];
-      
-      console.log('Current meeting point:', currentMeetingPoint);
-      console.log('Winner:', winner);
-      
+
       if (winner && winner[0] !== currentMeetingPoint) {
-        console.log('Updating meeting point to:', winner[0]);
-        
         // Always update to ensure it reflects the highest votes
         const { error: updateError } = await supabase
           .from('ride_groups')
           .update({ meeting_point: winner[0] })
           .eq('id', rideId);
 
-        if (updateError) {
-          console.error('Error updating meeting point:', updateError);
-          throw updateError;
-        }
+        if (updateError) throw updateError;
 
         // Send email notifications to all members
         const { data: rideMembers } = await supabase
@@ -186,12 +169,10 @@ export const MeetingPointVoting = ({
           }
         }
         
-        console.log('Meeting point updated successfully');
         toast.success(`Meeting point updated to: ${winner[0]}`);
         onUpdate();
       }
     } catch (error: any) {
-      console.error("Failed to auto-update meeting point:", error);
       toast.error("Failed to update meeting point automatically");
     }
   };

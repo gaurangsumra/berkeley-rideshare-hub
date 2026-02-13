@@ -137,7 +137,6 @@ export const GoogleCalendarImport = ({ onEventsFetched }: GoogleCalendarImportPr
             onEventsFetched(parsedEvents);
             toast.success(`Found ${parsedEvents.length} events from Google Calendar`);
         } catch (error) {
-            console.error('Google Calendar Error:', error);
             toast.error((error as Error).message);
         } finally {
             setLoading(false);

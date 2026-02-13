@@ -99,7 +99,6 @@ export const EventInterest = ({ eventId }: EventInterestProps) => {
                 toast.success("Added to your interests!");
             }
         } catch (error) {
-            console.error('Error toggling interest:', error);
             toast.error("Failed to update interest");
         } finally {
             setLoading(false);

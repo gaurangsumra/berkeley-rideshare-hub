@@ -48,7 +48,6 @@ export const ShareRideDetails = ({ rideId, event, ride, members, driver, open: e
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        console.error("User not authenticated");
         return;
       }
 
@@ -71,7 +70,7 @@ export const ShareRideDetails = ({ rideId, event, ride, members, driver, open: e
         setInviteLink(data.inviteLink);
       }
     } catch (error) {
-      console.error('Failed to generate invite link:', error);
+      // Failed to generate invite link
     } finally {
       setLoadingLink(false);
     }

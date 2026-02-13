@@ -153,7 +153,6 @@ const EventDetail = () => {
       toast.success("Event deleted successfully");
       navigate("/events");
     } catch (error: any) {
-      console.error('Error deleting event:', error);
       toast.error(error.message || "Failed to delete event");
     } finally {
       setDeleting(false);

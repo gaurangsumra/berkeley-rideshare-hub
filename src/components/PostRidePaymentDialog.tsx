@@ -71,7 +71,6 @@ export const PostRidePaymentDialog = ({
         setShowVenmoDialog(true);
       }
     } catch (error: any) {
-      console.error('Error checking Venmo username:', error);
       toast.error('Failed to load your profile');
     }
   };
@@ -86,6 +85,14 @@ export const PostRidePaymentDialog = ({
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       toast.error("Please enter a valid amount");
+      return;
+    }
+    if (parsedAmount > 10000) {
+      toast.error("Amount cannot exceed $10,000");
+      return;
+    }
+    if (!/^\d+(\.\d{1,2})?$/.test(amount)) {
+      toast.error("Please enter an amount with up to 2 decimal places");
       return;
     }
 
@@ -130,7 +137,6 @@ export const PostRidePaymentDialog = ({
       toast.success('Payment amount recorded!');
       setStep('show-split');
     } catch (error: any) {
-      console.error('Error recording payment:', error);
       toast.error(error.message || 'Failed to record payment');
     } finally {
       setSubmitting(false);

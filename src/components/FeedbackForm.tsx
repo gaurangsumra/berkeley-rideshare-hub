@@ -72,7 +72,6 @@ export const FeedbackForm = ({ rideId, defaultEmail }: FeedbackFormProps) => {
         contact_email: defaultEmail || "",
       });
     } catch (error) {
-      console.error("Error submitting feedback:", error);
       toast({
         title: "Error",
         description: "Failed to submit feedback. Please try again.",

@@ -225,7 +225,7 @@ export function ImportCalendarDialog({ open, onOpenChange, onEventsImported, def
           } else {
             // If error is duplicate key (already has access), that's fine.
             if (accessError.code !== '23505') {
-              console.error("Error linking event:", accessError);
+              // Non-duplicate error linking event
             }
           }
         } else {
@@ -262,7 +262,6 @@ export function ImportCalendarDialog({ open, onOpenChange, onEventsImported, def
       onOpenChange(false);
       onEventsImported();
     } catch (error) {
-      console.error('Import error:', error);
       toast.error((error as Error).message || "Failed to import events");
     } finally {
       setImporting(false);

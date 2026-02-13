@@ -69,7 +69,6 @@ const Auth = () => {
         return '/my-rides';
       }
     } catch (error) {
-      console.error('Error determining route:', error);
       return '/my-rides'; // Safe fallback
     }
   };
@@ -93,7 +92,6 @@ const Auth = () => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
         const route = await determinePostLoginRoute(session.user.id, token);
-        console.log('Auth routing on getSession with token:', token, 'to:', route);
         navigate(route);
       }
     });
@@ -101,7 +99,6 @@ const Auth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         const route = await determinePostLoginRoute(session.user.id, token);
-        console.log('Auth routing on SIGNED_IN with token:', token, 'to:', route);
         navigate(route);
       }
     });
@@ -119,7 +116,6 @@ const Auth = () => {
         .single();
 
       if (error || !inviteData) {
-        console.error('Invite validation error:', error);
         toast.error("Invalid invite link");
         return;
       }
@@ -171,7 +167,6 @@ const Auth = () => {
       
       toast.success("You've been invited to join a ride! Please sign in to continue.");
     } catch (error: any) {
-      console.error('Failed to validate invite:', error);
       toast.error("Failed to validate invite link");
     }
   };
@@ -250,7 +245,6 @@ const Auth = () => {
       if (user) {
         const urlToken = new URLSearchParams(window.location.search).get('invite');
         const route = await determinePostLoginRoute(user.id, urlToken);
-        console.log('Email sign-in routing with token:', urlToken, 'to:', route);
         toast.success("Signed in successfully!");
         navigate(route);
       }

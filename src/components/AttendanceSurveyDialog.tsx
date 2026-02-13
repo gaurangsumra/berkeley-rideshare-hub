@@ -102,7 +102,6 @@ export const AttendanceSurveyDialog = ({
 
       setMembers(membersData || []);
     } catch (error: any) {
-      console.error('Error fetching survey data:', error);
       toast.error('Failed to load survey');
     } finally {
       setLoading(false);
@@ -147,7 +146,6 @@ export const AttendanceSurveyDialog = ({
       // Check if threshold reached (50%)
       const threshold = Math.ceil(survey.total_members * 0.5);
       if (newResponseCount >= threshold) {
-        console.log('Threshold reached, triggering consensus processing');
         await supabase.functions.invoke('process-attendance-consensus', {
           body: { survey_id: survey.id }
         });
@@ -191,7 +189,6 @@ export const AttendanceSurveyDialog = ({
       onOpenChange(false);
       onSubmitted?.();
     } catch (error: any) {
-      console.error('Error submitting response:', error);
       toast.error(error.message || 'Failed to submit response');
     } finally {
       setSubmitting(false);

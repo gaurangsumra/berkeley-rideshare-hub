@@ -23,12 +23,11 @@ export const useUserRole = () => {
           .single();
 
         if (error && error.code !== 'PGRST116') {
-          console.error('Error checking admin status:', error);
+          // Non-critical error checking admin status
         }
 
         setIsAdmin(!!data);
       } catch (error) {
-        console.error('Error checking admin status:', error);
         setIsAdmin(false);
       } finally {
         setLoading(false);
