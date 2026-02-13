@@ -33,7 +33,7 @@ export const Navigation = () => {
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
         <AboutSheet
           trigger={
-            <Button variant="ghost" size="icon" className="rounded-full">
+            <Button variant="ghost" size="icon" className="rounded-full" aria-label="About Berkeley Rides">
               <Info className="h-5 w-5" />
             </Button>
           }
@@ -50,6 +50,7 @@ export const Navigation = () => {
                 <Link
                   key={href}
                   to={href}
+                  aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors",
                     isActive

@@ -5,28 +5,14 @@ import { User } from "@supabase/supabase-js";
 import { Navigation } from "@/components/Navigation";
 import { EventCard } from "@/components/EventCard";
 import { format } from "date-fns";
-import eventsData from "@/data/haas-events.json";
-import { Button } from "@/components/ui/button"; // Import Button
-import { Upload } from "lucide-react"; // Import Upload icon
-
-interface Event {
-  title: {
-    params: {
-      ENCODING: string;
-    };
-    val: string;
-  };
-  startDate: string;
-  endDate: string;
-  location: string;
-  description: string;
-  url: string;
-  uid: string;
-}
+import { getAllEvents } from "@/lib/events";
+import type { HaasEvent } from "@/types/event";
+import { Button } from "@/components/ui/button";
+import { Upload } from "lucide-react";
 
 const Events = () => {
   const navigate = useNavigate();
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<HaasEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
 
@@ -50,8 +36,7 @@ const Events = () => {
 
   useEffect(() => {
     setLoading(true);
-    // The events are imported from the JSON file
-    setEvents(eventsData as Event[]);
+    setEvents(getAllEvents());
     setLoading(false);
   }, []);
 
@@ -72,7 +57,7 @@ const Events = () => {
     window.location.href = authUrl;
   };
 
-  const groupEventsByDate = (events: Event[]) => {
+  const groupEventsByDate = (events: HaasEvent[]) => {
     const now = new Date();
     const upcomingEvents = events.filter(e => new Date(e.startDate) >= now);
     const pastEvents = events.filter(e => new Date(e.startDate) < now);
@@ -86,7 +71,7 @@ const Events = () => {
       }
       acc[dateKey].push(event);
       return acc;
-    }, {} as Record<string, Event[]>);
+    }, {} as Record<string, HaasEvent[]>);
 
     return Object.entries(grouped);
   };

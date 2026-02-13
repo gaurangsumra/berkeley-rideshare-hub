@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [2026-02-13]
 
+### Fixed
+- Replaced `useState<any>` in `Profile.tsx` with typed `UserProfile` and `RideStats` interfaces.
+- Removed unused `html-to-image` dependency from `package.json`.
+- Added `aria-label` to icon-only buttons in Navigation, NotificationBell, EventHero, and RideGroupCard.
+- Added `aria-current="page"` to active navigation links.
+- Added `role="button"`, `tabIndex`, and keyboard handler to EventCard for keyboard navigation.
+- Added `aria-label="Unread"` and `role="img"` to notification unread dot (color-only indicator).
+- Added alt text to profile avatar image.
+
+### Changed
+- Refactored `Events.tsx` and `EventCard.tsx` to use shared `HaasEvent` type and `getAllEvents()` helper instead of local interfaces and raw JSON import.
+
 ### Added
 - Created shared `HaasEvent` / `RawHaasEvent` types in `src/types/event.ts` and data helpers (`getAllEvents`, `getEventByUid`) in `src/lib/events.ts`.
 - Built `HaasEventDetail` page (`src/pages/HaasEventDetail.tsx`) — loads Haas events from local JSON, displays event details, lists ride groups grouped by time window, and supports ride creation.

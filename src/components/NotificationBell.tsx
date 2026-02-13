@@ -137,7 +137,7 @@ export const NotificationBell = () => {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative" aria-label="View notifications">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <Badge
@@ -203,7 +203,7 @@ export const NotificationBell = () => {
                       </p>
                     </div>
                     {!notification.read && (
-                      <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-2" />
+                      <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-2" aria-label="Unread" role="img" />
                     )}
                   </div>
                 </button>

@@ -433,7 +433,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
                 size="icon"
                 onClick={() => setShowEditDialog(true)}
                 className="h-8 w-8"
-                title="Edit ride details"
+                aria-label="Edit ride details"
               >
                 <Pencil className="h-4 w-4" />
               </Button>
@@ -444,6 +444,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
                 size="icon"
                 onClick={() => setShowDeleteDialog(true)}
                 className="h-8 w-8"
+                aria-label="Delete ride"
               >
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
@@ -557,7 +558,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
                   toast.success("Opening WhatsApp Group...");
                 }}
                 variant="outline"
-                title="Open WhatsApp Group"
+                aria-label="Open WhatsApp Group"
                 className="text-green-600 border-green-200 hover:bg-green-50"
               >
                 <MessageCircle className="w-4 h-4" />
@@ -565,14 +566,14 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
               <Button
                 onClick={() => setShowShare(true)}
                 variant="outline"
-                title="Share ride details"
+                aria-label="Share ride details"
               >
                 <Share2 className="w-4 h-4" />
               </Button>
               <Button
                 onClick={() => setShowInvite(true)}
                 variant="outline"
-                title="Invite others"
+                aria-label="Invite others"
               >
                 <UserPlus className="w-4 h-4" />
               </Button>
@@ -587,7 +588,7 @@ export const RideGroupCard = ({ rideGroup, currentUserId, onUpdate, isAdmin, eve
               <Button
                 onClick={() => setShowCompleteDialog(true)}
                 variant="secondary"
-                title="Manually complete ride and submit attendance"
+                aria-label="Manually complete ride and submit attendance"
               >
                 <CheckCircle className="w-4 h-4" />
               </Button>

@@ -3,39 +3,30 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, MapPin, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-
-interface Event {
-  title: {
-    params: {
-      ENCODING: string;
-    };
-    val: string;
-  };
-  startDate: string;
-  endDate: string;
-  location: string;
-  description: string;
-  url: string;
-  uid: string;
-}
+import type { HaasEvent } from "@/types/event";
 
 interface EventCardProps {
-  event: Event;
+  event: HaasEvent;
   isPastEvent?: boolean;
 }
 
 export const EventCard = ({ event, isPastEvent = false }: EventCardProps) => {
   const navigate = useNavigate();
+  const goToEvent = () => navigate(`/haas-events/${event.uid}`);
 
   return (
     <Card
       className={`cursor-pointer hover:border-accent transition-colors ${isPastEvent ? 'opacity-60 grayscale' : ''}`}
-      onClick={() => navigate(`/haas-events/${event.uid}`)}
+      onClick={goToEvent}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToEvent(); } }}
+      role="button"
+      tabIndex={0}
+      aria-label={`View event: ${event.title}`}
     >
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-xl font-semibold text-primary">{event.title.val}</h3>
+            <h3 className="text-xl font-semibold text-primary">{event.title}</h3>
             {isPastEvent && (
               <Badge variant="secondary" className="text-xs">Past Event</Badge>
             )}

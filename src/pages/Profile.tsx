@@ -11,17 +11,32 @@ import { LogOut, User, Upload, X, Star } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PhotoEditorDialog } from "@/components/PhotoEditorDialog";
 
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  photo: string | null;
+  program: string | null;
+  venmo_username: string | null;
+  is_invited_user: boolean | null;
+}
+
+interface RideStats {
+  completed_rides: number;
+  completion_percentage: number;
+}
+
 const Profile = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [program, setProgram] = useState("");
   const [venmoUsername, setVenmoUsername] = useState("");
   const [uploading, setUploading] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<RideStats | null>(null);
   const [weightedRating, setWeightedRating] = useState<number | null>(null);
 
   useEffect(() => {
@@ -263,7 +278,7 @@ const Profile = () => {
           <CardContent className="space-y-4">
             <div className="flex flex-col items-center gap-4 pb-4 border-b">
               <Avatar className="w-24 h-24">
-                <AvatarImage src={photoUrl || undefined} alt={profile.name} />
+                <AvatarImage src={photoUrl || undefined} alt={`${profile.name}'s profile photo`} />
                 <AvatarFallback className="text-2xl">
                   {profile.name?.charAt(0)?.toUpperCase() || 'U'}
                 </AvatarFallback>

@@ -32,7 +32,7 @@ export const EventHero = ({ event, isCreator, isAdmin, onEdit, onDelete }: Event
           <div className="absolute top-4 right-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="bg-background/80 backdrop-blur-sm">
+                <Button variant="ghost" size="icon" className="bg-background/80 backdrop-blur-sm" aria-label="Event options">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
