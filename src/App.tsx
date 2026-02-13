@@ -15,6 +15,7 @@ import UserProfile from "./pages/UserProfile";
 import Notifications from "./pages/Notifications";
 import ResetPassword from "./pages/ResetPassword";
 import Admin from "./pages/Admin";
+import HaasEventDetail from "./pages/HaasEventDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/events" element={<Events />} />
           <Route path="/events/:eventId" element={<EventDetail />} />
+          <Route path="/haas-events/:eventUid" element={<HaasEventDetail />} />
           <Route path="/rides/:rideId" element={<RideDetail />} />
           <Route path="/users/:userId" element={<UserProfile />} />
           <Route path="/notifications" element={<Notifications />} />
