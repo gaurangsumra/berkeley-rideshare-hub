@@ -89,15 +89,8 @@ const Auth = () => {
       validateInviteToken(token);
     }
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        const route = await determinePostLoginRoute(session.user.id, token);
-        navigate(route);
-      }
-    });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
+      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session) {
         const route = await determinePostLoginRoute(session.user.id, token);
         navigate(route);
       }
@@ -280,8 +273,8 @@ const Auth = () => {
     try {
       setLoading(true);
       
-      // Build redirect URL with invite token if present
-      let redirectUrl = `${window.location.origin}/onboarding`;
+      // Redirect back to auth page — onAuthStateChange handles smart routing
+      let redirectUrl = `${window.location.origin}/auth`;
       if (inviteToken) {
         redirectUrl += `?invite=${inviteToken}`;
       }
