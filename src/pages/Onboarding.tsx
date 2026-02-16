@@ -45,42 +45,34 @@ const Onboarding = () => {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   useEffect(() => {
-    const initializeOnboarding = async () => {
-      // Extract invite token from URL
-      const params = new URLSearchParams(window.location.search);
-      const token = params.get('invite');
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('invite');
 
-      // Step 1: Get session first
-      const { data: { session } } = await supabase.auth.getSession();
+    const handleSession = async (session: any) => {
       if (!session) {
-        // If we have a token but no session, redirect to auth with the token param
-        if (token) {
-          // Store token in local storage or pass it via state? 
-          // The auth page should handle the return URL with query params.
-          // Usually navigate("/auth") preserves nothing unless we tell it.
-          // But if the user clicks the link, they land here.
-          // If we redirect to /auth, we should probably keep the search params.
-          // But for now, let's assume the auth flow handles return_to or the user signs in and comes back.
-          // Actually, if they sign in, they might be redirected to /events by Index.tsx.
-          // We need to make sure they come back to /onboarding?invite=...
-          // This is a broader auth issue, but let's focus on the Onboarding component logic for now.
-        }
         navigate("/auth");
         return;
       }
 
-      // Step 2: If invite token exists, validate it FIRST and get the details
       let inviteData = null;
       if (token) {
         setInviteToken(token);
         inviteData = await validateAndFetchInvite(token);
       }
 
-      // Step 3: Pass invite data directly to fetchProfile
       fetchProfile(session.user.id, inviteData);
     };
 
-    initializeOnboarding();
+    // Listen for auth state changes (handles OAuth callback code exchange)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+          handleSession(session);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const validateAndFetchInvite = async (token: string) => {

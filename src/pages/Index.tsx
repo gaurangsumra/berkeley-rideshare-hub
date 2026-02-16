@@ -6,13 +6,15 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/events");
-      } else {
-        navigate("/auth");
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'INITIAL_SESSION') {
+          navigate(session ? "/events" : "/auth");
+        }
       }
-    });
+    );
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   return (
