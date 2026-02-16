@@ -77,7 +77,7 @@ const Auth = () => {
     // Parse invite token from URL once and use consistently
     const params = new URLSearchParams(window.location.search);
     const token = params.get('invite');
-    
+
     if (token) {
       // Validate UUID format to prevent malformed tokens
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -89,14 +89,30 @@ const Auth = () => {
       validateInviteToken(token);
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const routeIfSession = async (session: any) => {
       if (session) {
         const route = await determinePostLoginRoute(session.user.id, token);
         navigate(route);
       }
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    // Handle OAuth callback: manually parse hash tokens and set session
+    if (window.location.hash.includes('access_token')) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const access_token = hashParams.get('access_token');
+      const refresh_token = hashParams.get('refresh_token');
+      if (access_token && refresh_token) {
+        supabase.auth.setSession({ access_token, refresh_token }).then(({ data: { session } }) => {
+          routeIfSession(session);
+        });
+        return; // skip onAuthStateChange — we're handling it directly
+      }
+    }
+
+    // Normal flow: check existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      routeIfSession(session);
+    });
   }, [navigate]);
 
   const validateInviteToken = async (token: string) => {
