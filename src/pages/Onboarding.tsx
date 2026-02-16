@@ -64,9 +64,11 @@ const Onboarding = () => {
     };
 
     // Listen for auth state changes (handles OAuth callback code exchange)
+    let handled = false;
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+      async (_event, session) => {
+        if (!handled) {
+          handled = true;
           handleSession(session);
         }
       }

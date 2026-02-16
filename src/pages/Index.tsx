@@ -6,9 +6,11 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let handled = false;
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === 'INITIAL_SESSION') {
+      (_event, session) => {
+        if (!handled) {
+          handled = true;
           navigate(session ? "/events" : "/auth");
         }
       }

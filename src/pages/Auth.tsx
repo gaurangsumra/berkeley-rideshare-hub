@@ -89,8 +89,8 @@ const Auth = () => {
       validateInviteToken(token);
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
         const route = await determinePostLoginRoute(session.user.id, token);
         navigate(route);
       }
