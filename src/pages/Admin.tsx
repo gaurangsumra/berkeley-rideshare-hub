@@ -20,6 +20,12 @@ const Admin = () => {
   const { isAdmin, loading } = useUserRole();
   const [activeTab, setActiveTab] = useState("overview");
 
+  useEffect(() => {
+    if (!loading && !isAdmin) {
+      navigate("/events");
+    }
+  }, [loading, isAdmin, navigate]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -27,12 +33,6 @@ const Admin = () => {
       </div>
     );
   }
-
-  useEffect(() => {
-    if (!loading && !isAdmin) {
-      navigate("/events");
-    }
-  }, [loading, isAdmin, navigate]);
 
   if (!isAdmin) {
     return null;
