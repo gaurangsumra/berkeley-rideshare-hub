@@ -71,17 +71,67 @@ export const AttendanceSurveyDialog = ({
       if (!session) return;
       setCurrentUserId(session.user.id);
 
-      // Fetch survey
-      const { data: surveyData, error: surveyError } = await supabase
+      // Fetch survey (use maybeSingle so we can create one if missing)
+      let { data: surveyData } = await supabase
         .from('ride_attendance_surveys')
         .select(`
           *,
           ride_attendance_responses(respondent_user_id)
         `)
         .eq('ride_id', rideId)
-        .single();
+        .maybeSingle();
 
-      if (surveyError) throw surveyError;
+      // If no survey exists, create one on-the-fly
+      if (!surveyData) {
+        const { count: memberCount } = await supabase
+          .from('ride_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('ride_id', rideId)
+          .eq('status', 'joined');
+
+        if (!memberCount) {
+          toast.error('No members found for this ride');
+          return;
+        }
+
+        // Get event time for deadline calculation
+        const { data: rideData } = await supabase
+          .from('ride_groups')
+          .select('events(date_time)')
+          .eq('id', rideId)
+          .single();
+
+        const eventTime = rideData?.events
+          ? new Date((rideData.events as any).date_time)
+          : new Date();
+        // Deadline: max of (event_time + 48h) or (now + 48h)
+        const fromEvent = new Date(eventTime.getTime() + 48 * 60 * 60 * 1000);
+        const fromNow = new Date(Date.now() + 48 * 60 * 60 * 1000);
+        const deadline = fromEvent > fromNow ? fromEvent : fromNow;
+
+        const { data: newSurvey, error: createError } = await supabase
+          .from('ride_attendance_surveys')
+          .insert({
+            ride_id: rideId,
+            survey_status: 'in_progress' as const,
+            survey_sent_at: new Date().toISOString(),
+            survey_deadline: deadline.toISOString(),
+            total_members: memberCount,
+            responses_received: 0,
+          })
+          .select(`
+            *,
+            ride_attendance_responses(respondent_user_id)
+          `)
+          .single();
+
+        if (createError || !newSurvey) {
+          toast.error('Failed to create survey');
+          return;
+        }
+
+        surveyData = newSurvey;
+      }
 
       setSurvey(surveyData);
       setRespondents(
