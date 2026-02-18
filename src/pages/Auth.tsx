@@ -27,27 +27,160 @@ const Auth = () => {
   const [resetEmail, setResetEmail] = useState("");
   const [sendingReset, setSendingReset] = useState(false);
 
+  // Process invite for an already-authenticated, already-onboarded user
+  const processInviteForAuthenticatedUser = async (userId: string, token: string): Promise<string | null> => {
+    try {
+      // Validate invite
+      const { data: invite, error: inviteError } = await supabase
+        .from('ride_invites')
+        .select('ride_id, expires_at, max_uses, use_count, invited_email, inviter_name')
+        .eq('invite_token', token)
+        .single();
+
+      if (inviteError || !invite) {
+        toast.error("Invalid invite link");
+        return null;
+      }
+
+      if (new Date(invite.expires_at) < new Date()) {
+        toast.error("This invite link has expired");
+        return null;
+      }
+
+      if (invite.max_uses && invite.use_count >= invite.max_uses) {
+        toast.error("This invite link has been fully used");
+        return null;
+      }
+
+      // Get user profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .eq('id', userId)
+        .single();
+
+      if (!profile) return null;
+
+      // Check email match if specified
+      if (invite.invited_email) {
+        const normalizedInviteEmail = invite.invited_email.toLowerCase().trim();
+        const normalizedProfileEmail = profile.email?.toLowerCase().trim();
+        if (normalizedInviteEmail !== normalizedProfileEmail) {
+          toast.error(`This invite is for ${invite.invited_email}. Please sign in with that email.`);
+          return null;
+        }
+      }
+
+      // Check if already a member
+      const { data: existingMember } = await supabase
+        .from('ride_members')
+        .select('id')
+        .eq('ride_id', invite.ride_id)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existingMember) {
+        toast.info("You're already a member of this ride");
+        return invite.ride_id;
+      }
+
+      // Get ride details for capacity check and event access
+      const { data: rideGroup } = await supabase
+        .from('ride_groups')
+        .select('capacity, departure_time, event_id')
+        .eq('id', invite.ride_id)
+        .single();
+
+      if (rideGroup && new Date(rideGroup.departure_time) < new Date()) {
+        toast.error("This ride has already departed");
+        return null;
+      }
+
+      // Check capacity
+      const { data: currentMembers } = await supabase
+        .from('ride_members')
+        .select('id')
+        .eq('ride_id', invite.ride_id);
+
+      const memberCount = currentMembers?.length || 0;
+      if (rideGroup?.capacity && memberCount >= rideGroup.capacity) {
+        toast.error("This ride is at full capacity");
+        return null;
+      }
+
+      // Update profile flags for invited (non-Berkeley) users
+      const isExternal = !profile.email?.toLowerCase().endsWith('@berkeley.edu');
+      if (isExternal) {
+        await supabase
+          .from('profiles')
+          .update({
+            is_invited_user: true,
+            invited_via_ride_id: invite.ride_id
+          })
+          .eq('id', userId);
+      }
+
+      // Join the ride
+      const { error: joinError } = await supabase
+        .from('ride_members')
+        .insert({
+          ride_id: invite.ride_id,
+          user_id: userId,
+          status: 'joined',
+          role: null,
+          willing_to_pay: false
+        });
+
+      if (joinError) {
+        toast.error("Failed to join ride");
+        return null;
+      }
+
+      // Grant event access
+      if (rideGroup?.event_id) {
+        await supabase
+          .from('event_access')
+          .insert({
+            user_id: userId,
+            event_id: rideGroup.event_id,
+            granted_via_ride_id: invite.ride_id
+          });
+      }
+
+      // Increment invite use count
+      await supabase
+        .from('ride_invites')
+        .update({ use_count: invite.use_count + 1 })
+        .eq('invite_token', token);
+
+      toast.success("Successfully joined the ride!");
+      return invite.ride_id;
+    } catch (error) {
+      return null;
+    }
+  };
+
   // Smart routing helper
   const determinePostLoginRoute = async (userId: string, inviteToken?: string | null): Promise<string> => {
     try {
-      // Priority 1: If invite token exists, always go to onboarding with invite
+      // Priority 1: If invite token exists, go to onboarding with invite (for new/unonboarded users)
       if (inviteToken) {
         return `/onboarding?invite=${inviteToken}`;
       }
-      
+
       // 1. Check if onboarding is complete (has photo)
       const { data: profile } = await supabase
         .from('profiles')
         .select('photo, email')
         .eq('id', userId)
         .single();
-      
+
       if (!profile?.photo) {
         return '/onboarding';
       }
-      
+
       const isBerkeleyUser = profile.email?.endsWith('@berkeley.edu');
-      
+
       if (isBerkeleyUser) {
         // Berkeley users: check for upcoming rides, else go to events
         const { data: upcomingRides } = await supabase
@@ -62,7 +195,7 @@ const Auth = () => {
           .eq('user_id', userId)
           .gte('ride_groups.departure_time', new Date().toISOString())
           .limit(1);
-        
+
         return upcomingRides?.length ? '/my-rides' : '/events';
       } else {
         // External users: always go to My Rides
@@ -91,6 +224,30 @@ const Auth = () => {
 
     const routeIfSession = async (session: any) => {
       if (session) {
+        if (token) {
+          // Check if user is already onboarded (has photo)
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('photo')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profile?.photo) {
+            // Already onboarded — process invite directly, skip onboarding
+            const rideId = await processInviteForAuthenticatedUser(session.user.id, token);
+            if (rideId) {
+              navigate(`/rides/${rideId}`);
+              return;
+            }
+            // Invite failed — route normally without invite token
+            const route = await determinePostLoginRoute(session.user.id);
+            navigate(route);
+            return;
+          }
+          // Not yet onboarded — go through onboarding with invite
+          navigate(`/onboarding?invite=${token}`);
+          return;
+        }
         const route = await determinePostLoginRoute(session.user.id, token);
         navigate(route);
       }
@@ -253,6 +410,22 @@ const Auth = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const urlToken = new URLSearchParams(window.location.search).get('invite');
+        if (urlToken) {
+          // Check if already onboarded
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('photo')
+            .eq('id', user.id)
+            .single();
+
+          if (profile?.photo) {
+            const rideId = await processInviteForAuthenticatedUser(user.id, urlToken);
+            if (rideId) {
+              navigate(`/rides/${rideId}`);
+              return;
+            }
+          }
+        }
         const route = await determinePostLoginRoute(user.id, urlToken);
         toast.success("Signed in successfully!");
         navigate(route);

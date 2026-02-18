@@ -60,7 +60,7 @@ const Onboarding = () => {
         inviteData = await validateAndFetchInvite(token);
       }
 
-      fetchProfile(session.user.id, inviteData);
+      fetchProfile(session.user.id, inviteData, token);
     };
 
     // Listen for auth state changes (handles OAuth callback code exchange)
@@ -244,7 +244,7 @@ const Onboarding = () => {
     }
   };
 
-  const fetchProfile = async (userId: string, currentInviteDetails?: InviteDetails | null) => {
+  const fetchProfile = async (userId: string, currentInviteDetails?: InviteDetails | null, tokenFromUrl?: string | null) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -272,8 +272,10 @@ const Onboarding = () => {
       // If user already has a photo
       if (data.photo) {
         // If there's an invite token, show the invite step
+        // Use tokenFromUrl param to avoid React state timing issues
+        const hasToken = tokenFromUrl || inviteToken;
         const inviteToProcess = currentInviteDetails || inviteDetails;
-        if (inviteToken && inviteToProcess) {
+        if (hasToken && inviteToProcess) {
           setStep('invite');
           return;
         }
