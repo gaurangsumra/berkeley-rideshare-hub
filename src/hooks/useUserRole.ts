@@ -15,18 +15,16 @@ export const useUserRole = () => {
           return;
         }
 
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .eq('role', 'admin')
-          .single();
+        const { data, error } = await supabase.rpc('has_role', {
+          _user_id: session.user.id,
+          _role: 'admin',
+        });
 
-        if (error && error.code !== 'PGRST116') {
+        if (error) {
           // Non-critical error checking admin status
         }
 
-        setIsAdmin(!!data);
+        setIsAdmin(data === true);
       } catch (error) {
         setIsAdmin(false);
       } finally {

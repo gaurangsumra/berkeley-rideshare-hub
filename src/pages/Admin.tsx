@@ -3,17 +3,22 @@ import { useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserDataTable } from "@/components/admin/UserDataTable";
-import { RideMembershipTable } from "@/components/admin/RideMembershipTable";
 import { AnalyticsSummary } from "@/components/admin/AnalyticsSummary";
-import { RideNotificationStats } from "@/components/admin/RideNotificationStats";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { OverviewTab } from "@/components/admin/OverviewTab";
+import { UserDataTable } from "@/components/admin/UserDataTable";
+import { EventsTab } from "@/components/admin/EventsTab";
+import { RideMembershipTable } from "@/components/admin/RideMembershipTable";
+import { PaymentsTab } from "@/components/admin/PaymentsTab";
+import { FeedbackTab } from "@/components/admin/FeedbackTab";
+import { RatingsTab } from "@/components/admin/RatingsTab";
+import { SystemTab } from "@/components/admin/SystemTab";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield } from "lucide-react";
 
 const Admin = () => {
   const navigate = useNavigate();
   const { isAdmin, loading } = useUserRole();
-  const [activeTab, setActiveTab] = useState("users");
+  const [activeTab, setActiveTab] = useState("overview");
 
   if (loading) {
     return (
@@ -36,7 +41,7 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       <Navigation />
-      
+
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <Card className="mb-6 bg-gradient-to-br from-primary/10 to-accent/10">
           <CardHeader>
@@ -45,7 +50,7 @@ const Admin = () => {
               Admin Dashboard
             </CardTitle>
             <CardDescription>
-              Comprehensive user data and ride group management
+              Comprehensive platform management and analytics
             </CardDescription>
           </CardHeader>
         </Card>
@@ -53,22 +58,49 @@ const Admin = () => {
         <AnalyticsSummary />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="users">User Data</TabsTrigger>
-            <TabsTrigger value="rides">Ride Memberships</TabsTrigger>
-            <TabsTrigger value="notifications">Email Notifications</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto">
+            <TabsList className="inline-flex w-auto min-w-full md:min-w-0">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="users">Users</TabsTrigger>
+              <TabsTrigger value="events">Events</TabsTrigger>
+              <TabsTrigger value="rides">Rides</TabsTrigger>
+              <TabsTrigger value="payments">Payments</TabsTrigger>
+              <TabsTrigger value="feedback">Feedback</TabsTrigger>
+              <TabsTrigger value="ratings">Ratings</TabsTrigger>
+              <TabsTrigger value="system">System</TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="overview" className="mt-6">
+            <OverviewTab />
+          </TabsContent>
 
           <TabsContent value="users" className="mt-6">
             <UserDataTable />
+          </TabsContent>
+
+          <TabsContent value="events" className="mt-6">
+            <EventsTab />
           </TabsContent>
 
           <TabsContent value="rides" className="mt-6">
             <RideMembershipTable />
           </TabsContent>
 
-          <TabsContent value="notifications" className="mt-6">
-            <RideNotificationStats />
+          <TabsContent value="payments" className="mt-6">
+            <PaymentsTab />
+          </TabsContent>
+
+          <TabsContent value="feedback" className="mt-6">
+            <FeedbackTab />
+          </TabsContent>
+
+          <TabsContent value="ratings" className="mt-6">
+            <RatingsTab />
+          </TabsContent>
+
+          <TabsContent value="system" className="mt-6">
+            <SystemTab />
           </TabsContent>
         </Tabs>
       </div>
